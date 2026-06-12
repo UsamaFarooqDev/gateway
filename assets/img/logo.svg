@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" fill="none">
+  <!-- Icon: stylised cab/car with lightning bolt -->
+  <rect x="2" y="10" width="36" height="20" rx="6" fill="#F37A20" opacity="0.15"/>
+  <path d="M8 22 L12 14 L28 14 L32 22 Z" fill="#F37A20" opacity="0.6"/>
+  <rect x="6" y="22" width="28" height="6" rx="3" fill="#F37A20"/>
+  <circle cx="11" cy="29" r="3" fill="#0D0D1A" stroke="#F37A20" stroke-width="1.5"/>
+  <circle cx="29" cy="29" r="3" fill="#0D0D1A" stroke="#F37A20" stroke-width="1.5"/>
+  <!-- Bolt -->
+  <path d="M20 12 L17 20 L20.5 20 L18 28 L24 18 L20 18 Z" fill="#FFFFFF" opacity="0.9"/>
+  <!-- Wordmark -->
+  <text x="46" y="25" font-family="Poppins, sans-serif" font-size="15" font-weight="700" fill="#FFFFFF">Power<tspan fill="#F37A20">Cabs</tspan></text>
+</svg>

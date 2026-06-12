@@ -1,0 +1,47 @@
+{
+    "stripe": {
+        "enabled": false,
+        "publishable_key": "",
+        "secret_key": "",
+        "webhook_secret": "",
+        "mode": "test",
+        "last_tested": null,
+        "last_test_status": null,
+        "last_test_msg": null
+    },
+    "google_maps": {
+        "enabled": false,
+        "maps_js_key": "AIzaSyB9ea0A-mjnD5iHfT9X8Dn5YYH4_KZopLI",
+        "directions_key": "AIzaSyB9ea0A-mjnD5iHfT9X8Dn5YYH4_KZopLI",
+        "last_tested": "2026-05-28T20:18:10+01:00",
+        "last_test_status": "ok",
+        "last_test_msg": "Google Maps API key is valid."
+    },
+    "firebase": {
+        "enabled": false,
+        "service_account_json": "{\r\n  \"type\": \"service_account\",\r\n  \"project_id\": \"powercabs-ireland-limitd\",\r\n  \"private_key_id\": \"d00b2fcfba6bd520e1cbc2d05b3874e6d90ed3db\",\r\n  \"private_key\": \"-----BEGIN PRIVATE KEY-----\\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCmbmU0gm7JAchf\\nXvaL3qZvoWUWsEqwN5mMIlhgKLqXc+n47otUl\/Ed9Yt2uWdSCu2IjIsaEm7LxrmK\\n9hvMhMzlNa5oCMKRKOrQFdNhGnLaE3vucu\/Ia2swzGaGEWtTMjJZHrqc8r24V4JW\\naM55VYre3iisspgGO3+0orxS7Hs\/rb0wfrQDmZc62x2A3tHrus6xpV8kbn+QNoWI\\nWiBlrthne80jN1UsrKLNKxDos0lNV6zqv58YyVr0k+jgyH0AGk6w49L++rkY8FLA\\nBhtWSd8qLZVsl1mMK9UNbBJC8m9hx+CN2hKTM1Ie3O1+zZHe2fAAsNLcIE9OWyRf\\nikyzvaLrAgMBAAECggEABCWGUPzE8i4gsLucIez+Bumlq\/SKz9bQH7farX6mSNAN\\nrsg8DB4DAbo\/QMnVbgEGslsUu3q6bEpQZMrFSN8Ffy\/LX3KEbSXF\/+w4ntflWlNC\\nSF\/FuJ\/F2mqP+AbRaTpmxbtTGUZKUsr0sjQcnNT0R6GPsDR86X7XAN2jGop4zE58\\nuJzYiJLMXzOiEP4ScFMWx+BubtuiRM+WcyzZ\/qhx7SNuA9pCy+MLJPOg2NIrPXui\\n\/z2+q\/iN+YIm1HKh2\/EzGJndMf7MjfGCjiN04MT1dyhOKG1NaJSHaOORFNobiclt\\nquYaLdn+INy\/xg711EyQAV8JGjS1LfNRuy6xhfcnYQKBgQDVDdDljA3phgejnIAf\\nfkCXBsE0rjl1d7UdA1apvrr5\/1N87BdnkA2SF3DTRW+YZMWhqyzYAG9mz0eE3Qn5\\nzeDA68dqjgVnQ\/j0o8iO4rUlgzX56vsYyRIBzJSkvgnlIPDwnATdNAxHvYuz3kfK\\n3LwCjk\/PYMNFfpesgynrr2PbIQKBgQDH+rcIpWDwDTLPbGjR+7orE\/sWAi1xFaCl\\nQf5yJ\/6ES8a320+yiKgZ\/Kexj3R+Pm2luXx52IgObE0YbgXM7LVn9t6dghMZvnvm\\nxoEr8USSivcWcJRcepKTWeDQM1NaN0f1aClWGCEPUL5gdf9upY2+huKL3wCiBdPg\\nMxAgUbioiwKBgQC\/X62ow2krvkzWVhlwMIPsJREfNPA\/58szyG\/sAXsKXKKtr5RG\\nXksSUyPxYomfJcWwNoYNcDag7sebPMFdNeUQ5bk2qWOJIrFZblUUo+d7TqUJXF04\\nIkSegRlz8ZAJ1NEYD8z+tWXiewwmASATxLrMwPBHou9EWTX8q8TYA696gQKBgCZC\\nJuY2jXcfb0sTmHIj0JgROIYbYIoz8wnquD0qvZydyqS+Bl9HmbFvDr3\/je\/hDaUY\\n+WFuNYlc2tsDoYR0\/LepGSnVCsZwFNAvxeKcQ9wtTdwzKY8PvB8IoOP0DcxCqzed\\n99qKvzho4CMgMAABGD8NGyZbQYm9x60q17j3KXbFAoGBALv\/+9NrsQ5ZOdcPyE7s\\nJEa8oJAYsE\/Fbs9OHJlZKn0er2dJygkeb59bNJY6aSpU3Ozejdx432TeJ1thFcs0\\nX+8WKKvlXGja6Pym3fYZQFNf634840OTb1pkQzyjI\/Blv+K9yjYrJx52B+oqKOg9\\nAlV39j12p3AsoKg1yTUptHmq\\n-----END PRIVATE KEY-----\\n\",\r\n  \"client_email\": \"firebase-adminsdk-fbsvc@powercabs-ireland-limitd.iam.gserviceaccount.com\",\r\n  \"client_id\": \"112207995405923300171\",\r\n  \"auth_uri\": \"https:\/\/accounts.google.com\/o\/oauth2\/auth\",\r\n  \"token_uri\": \"https:\/\/oauth2.googleapis.com\/token\",\r\n  \"auth_provider_x509_cert_url\": \"https:\/\/www.googleapis.com\/oauth2\/v1\/certs\",\r\n  \"client_x509_cert_url\": \"https:\/\/www.googleapis.com\/robot\/v1\/metadata\/x509\/firebase-adminsdk-fbsvc%40powercabs-ireland-limitd.iam.gserviceaccount.com\",\r\n  \"universe_domain\": \"googleapis.com\"\r\n}",
+        "project_id": "powercabs-ireland-limitd",
+        "last_tested": "2026-05-28T20:22:10+01:00",
+        "last_test_status": "ok",
+        "last_test_msg": "FCM V1 API is working. (validate_only \u2014 no notification sent)"
+    },
+    "sms": {
+        "enabled": false,
+        "provider": "twilio",
+        "api_key": "",
+        "auth_token": "",
+        "from_number": "",
+        "last_tested": null,
+        "last_test_status": null,
+        "last_test_msg": null
+    },
+    "turn": {
+        "enabled": true,
+        "url": "free.expressturn.com:3478",
+        "username": "000000002091984498",
+        "credential": "kwzWwHwPxvcD7QYFl0clT78xCqo=",
+        "last_tested": null,
+        "last_test_status": null,
+        "last_test_msg": null
+    }
+}
