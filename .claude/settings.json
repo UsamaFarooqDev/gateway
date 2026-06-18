@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem \"d:\\\\Own Projects\\\\Powercabs Admin\" -Recurse -Depth 3)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(ls \"d:\\\\Own Projects\\\\Powercabs Admin\\\\\" 2>&1)",
+      "Read(//d/Own Projects/**)",
+      "Bash(php -l \"/d/Own Projects/Powercabs Admin/app/views/drivers/index.php\")",
+      "Bash(php -l \"/d/Own Projects/Powercabs Admin/index.php\")",
+      "Bash(php -l \"/d/Own Projects/Powercabs Admin/app/views/admins/index.php\")",
+      "Bash(php -l \"/d/Own Projects/Powercabs Admin/app/views/finance/index.php\")",
+      "Bash(php -l \"/d/Own Projects/Powercabs Admin/app/views/settings/index.php\")"
+    ]
+  }
+}

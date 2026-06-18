@@ -11,6 +11,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <!-- App JS -->
 <script src="assets/js/app.js"></script>
+<!-- Shared ride invoice generator (preview + PDF download) -->
+<script src="assets/js/invoice.js"></script>
 
 <script>
 // Fullscreen toggle

@@ -39,10 +39,13 @@ foreach ($rides as $r) {
         'dest_lng'        => (float)($r['dest_lng'] ?? 0),
         'driver_lat'      => (float)($r['driver_lat'] ?? 0),
         'driver_lng'      => (float)($r['driver_lng'] ?? 0),
+        'driver_id'       => $r['driver_id'] ?? '',
         'driver_name'     => $r['driver_name'] ?? '',
         'driver_phone'    => $r['driver_phone'] ?? '',
+        'driver_email'    => $r['driver_email'] ?? '',
         'passenger_name'  => $r['passenger_name'] ?? '',
         'passenger_phone' => $r['passenger_phone'] ?? '',
+        'passenger_email' => $r['passenger_email'] ?? '',
         'distance_km'     => $r['distance_km'] ?? null,
         'duration_min'    => $r['duration_min'] ?? null,
         'notes'           => $r['notes'] ?? '',
@@ -322,21 +325,7 @@ $dateTo       = $filters['date_to'] ?? '';
   </div>
 </div>
 
-<!-- Invoice Modal -->
-<div class="modal-overlay" id="invoiceModal">
-  <div class="modal-box" style="max-width:480px">
-    <div class="modal-header">
-      <i class="bi bi-receipt" style="color:#7c3aed;font-size:20px"></i>
-      <span class="modal-title">Ride Invoice</span>
-      <button class="modal-close" onclick="Modal.close('invoiceModal')"><i class="bi bi-x"></i></button>
-    </div>
-    <div class="modal-body" id="invBody"></div>
-    <div class="modal-footer">
-      <button class="btn-glass" onclick="Modal.close('invoiceModal')"><i class="bi bi-x"></i> Close</button>
-      <button class="btn-primary-glass" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
-    </div>
-  </div>
-</div>
+<?php require 'includes/invoice_modal.php'; ?>
 
 <!-- Map Modal -->
 <div class="modal-overlay" id="mapModal">
@@ -375,14 +364,7 @@ $rideDataJson = json_encode($rideDataMap, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNE
 $extraScripts = <<<'SCRIPTS'
 <script>
 const _RD = RIDE_DATA_PLACEHOLDER;
-
-function escHtml(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function fmtDate(d) {
-  if (!d) return '—';
-  return new Date(d).toLocaleString('en-IE', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-}
+setInvoiceData(_RD);
 
 // ─── Status badge ──────────────────────────────────────────────────
 function rideStatusBadge(status) {
@@ -436,43 +418,6 @@ function viewRide(id) {
     `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${grid}</div>`;
   Modal.open('rideDetailModal');
 }
-
-// ─── Invoice ───────────────────────────────────────────────────────
-function showInvoice(id) {
-  const r = _RD[id];
-  if (!r) { Toast.show('Ride not found.', 'error'); return; }
-  const fare = parseFloat(r.fare) || 0;
-  const commission  = (fare * 0.15).toFixed(2);
-  const driverEarns = (fare * 0.85).toFixed(2);
-
-  document.getElementById('invBody').innerHTML = `
-    <div style="text-align:center;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:16px">
-      <div style="font-size:20px;font-weight:700;color:var(--accent)">PowerCabs</div>
-      <div style="font-size:12px;color:var(--text-muted)">Ride Receipt · ${fmtDate(r.created_at)}</div>
-      <div style="font-size:11px;color:var(--text-subtle);margin-top:4px">#${id.slice(0,8).toUpperCase()}</div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
-      ${invRow('Passenger', r.passenger_name||'—')}
-      ${invRow('Driver', r.driver_name||'—')}
-      ${invRow('Pickup', r.pickup_addr||'—')}
-      ${invRow('Destination', r.dest_addr||'—')}
-      ${r.distance_km ? invRow('Distance', r.distance_km+' km') : ''}
-      ${r.duration_min ? invRow('Duration', r.duration_min+' min') : ''}
-    </div>
-    <div style="background:var(--hover-bg);border-radius:var(--radius-sm);padding:14px;border:1px solid var(--border)">
-      ${fareRow('Fare','€'+fare.toFixed(2))}
-      ${fareRow('Commission (15%)','€'+commission)}
-      ${fareRow('Driver Earnings','€'+driverEarns)}
-      <div style="border-top:2px solid var(--border);margin:10px 0"></div>
-      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700">
-        <span>Total Charged</span><span style="color:var(--accent)">€${fare.toFixed(2)}</span>
-      </div>
-    </div>
-  `;
-  Modal.open('invoiceModal');
-}
-function invRow(l,v) { return `<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text-muted)">${escHtml(l)}</span><span style="font-weight:500">${escHtml(v)}</span></div>`; }
-function fareRow(l,v) { return `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--text-muted)">${escHtml(l)}</span><span style="font-weight:500">${escHtml(v)}</span></div>`; }
 
 // ─── Live Map (Leaflet with OSRM routing) ─────────────────────────
 let _leafMap = null;

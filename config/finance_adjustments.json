@@ -1,0 +1,11 @@
+[
+    {
+        "id": "adj_6a32baeb142d15.07674611",
+        "type": "passenger",
+        "target_id": "0c93027b-2fe4-44a7-8635-9d7909cbf987",
+        "target_name": "John",
+        "amount": 20,
+        "reason": "Goodwill",
+        "created_at": "2026-06-17T16:19:07+01:00"
+    }
+]

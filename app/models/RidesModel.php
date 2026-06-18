@@ -5,7 +5,7 @@ class RidesModel {
 
     public function getAll(array $filters = [], int $page = 1, int $perPage = 20): array {
         $params = [
-            'select' => 'id,status,fare_eur,final_fare,created_at,updated_at,pickup_addr,dest_addr,pickup_lat,pickup_lng,dest_lat,dest_lng,user_id,driver_id,notes,cancelled_by',
+            'select' => 'id,status,fare_eur,final_fare,created_at,updated_at,pickup_addr,dest_addr,pickup_lat,pickup_lng,dest_lat,dest_lng,user_id,driver_id,notes,cancelled_by:canceled_by,distance_km,duration_min',
             'order'  => 'created_at.desc',
             'limit'  => $perPage,
             'offset' => ($page - 1) * $perPage,
@@ -24,7 +24,7 @@ class RidesModel {
 
     public function getById(string $id): ?array {
         $rows = $this->db->select('rides', [
-            'select' => 'id,status,fare_eur,final_fare,created_at,pickup_addr,dest_addr,pickup_lat,pickup_lng,dest_lat,dest_lng,user_id,driver_id,notes,cancelled_by,distance_km,duration_min',
+            'select' => 'id,status,fare_eur,final_fare,created_at,pickup_addr,dest_addr,pickup_lat,pickup_lng,dest_lat,dest_lng,user_id,driver_id,notes,cancelled_by:canceled_by,distance_km,duration_min',
             'id'     => 'eq.' . $id,
             'limit'  => 1,
         ]);
@@ -72,7 +72,7 @@ class RidesModel {
      */
     public function loadPageData(array $filters, int $page, int $perPage): array {
         $listParams = [
-            'select' => 'id,status,fare_eur,final_fare,created_at,updated_at,pickup_addr,dest_addr,pickup_lat,pickup_lng,dest_lat,dest_lng,user_id,driver_id,notes,cancelled_by',
+            'select' => 'id,status,fare_eur,final_fare,created_at,updated_at,pickup_addr,dest_addr,pickup_lat,pickup_lng,dest_lat,dest_lng,user_id,driver_id,notes,cancelled_by:canceled_by,distance_km,duration_min',
             'order'  => 'created_at.desc',
             'limit'  => $perPage,
             'offset' => ($page - 1) * $perPage,
@@ -216,8 +216,8 @@ class RidesModel {
 
         // Fetch drivers and passengers in parallel (two HTTP calls at once)
         $lookups = [];
-        if (!empty($driverIds)) $lookups['d'] = ['table'=>'drivers',    'params'=>['select'=>'id,full_name,phone,current_lat,current_lng','id'=>'in.('.implode(',', $driverIds).')']];
-        if (!empty($userIds))   $lookups['p'] = ['table'=>'passengers', 'params'=>['select'=>'id,name,phone','id'=>'in.('.implode(',', $userIds).')']];
+        if (!empty($driverIds)) $lookups['d'] = ['table'=>'drivers',    'params'=>['select'=>'id,full_name,phone,email,current_lat,current_lng','id'=>'in.('.implode(',', $driverIds).')']];
+        if (!empty($userIds))   $lookups['p'] = ['table'=>'passengers', 'params'=>['select'=>'id,name,phone,email','id'=>'in.('.implode(',', $userIds).')']];
 
         $driverMap    = [];
         $passengerMap = [];
@@ -240,10 +240,12 @@ class RidesModel {
                 'fare'            => $r['final_fare'] ?? $r['fare_eur'],
                 'driver_name'     => $driver['full_name'] ?? null,
                 'driver_phone'    => $driver['phone'] ?? null,
+                'driver_email'    => $driver['email'] ?? null,
                 'driver_lat'      => $driver['current_lat'] ?? null,
                 'driver_lng'      => $driver['current_lng'] ?? null,
                 'passenger_name'  => $passenger['name'] ?? null,
                 'passenger_phone' => $passenger['phone'] ?? null,
+                'passenger_email' => $passenger['email'] ?? null,
             ];
         }, $rows);
     }

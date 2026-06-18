@@ -24,7 +24,7 @@ $routes = [
     'dispatcher'    => null,
     'corporate'     => null,
     'fleet'         => ['file' => 'app/controllers/FleetController.php', 'class' => 'FleetController'],
-    'finance'       => null,
+    'finance'       => ['file' => 'app/controllers/FinanceController.php', 'class' => 'FinanceController'],
     'promotions'    => ['file' => 'app/controllers/PromotionsController.php', 'class' => 'PromotionsController'],
     'zones'         => null,
     'notifications' => ['file' => 'app/controllers/NotificationsController.php', 'class' => 'NotificationsController'],

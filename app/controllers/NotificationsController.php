@@ -196,35 +196,35 @@ class NotificationsController {
                         'notification' => ['title' => $title, 'body' => $message],
                         'data'         => ['click_action' => 'FLUTTER_NOTIFICATION_CLICK'],
                     ], $platformCfg);
+                    $ch = curl_init("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send");
+                    curl_setopt_array($ch, [
+                        CURLOPT_POST           => true,
+                        CURLOPT_HTTPHEADER     => ["Authorization: Bearer {$bearerToken}", 'Content-Type: application/json'],
+                        CURLOPT_POSTFIELDS     => json_encode(['message' => $fcmMsg]),
+                        CURLOPT_RETURNTRANSFER => true,
+                        CURLOPT_TIMEOUT        => 10,
+                    ]);
+                    $fcmRes   = curl_exec($ch);
+                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    $decoded  = json_decode($fcmRes, true);
+                    $campaign['fcm_sent'] = ($httpCode === 200 && empty($decoded['error']));
+                    if (!$campaign['fcm_sent']) {
+                        $campaign['fcm_error'] = $decoded['error']['message'] ?? "HTTP {$httpCode}";
+                    }
                 } else {
-                    $topic  = match($audience) {
-                        'all_passengers'  => 'passengers',
-                        'all_drivers'     => 'drivers',
-                        'active_drivers'  => 'active_drivers',
-                        'pending_drivers' => 'pending_drivers',
-                        default           => 'all',
-                    };
-                    $fcmMsg = array_merge([
-                        'topic'        => $topic,
-                        'notification' => ['title' => $title, 'body' => $message],
-                        'data'         => ['click_action' => 'FLUTTER_NOTIFICATION_CLICK'],
-                    ], $platformCfg);
-                }
-
-                $ch = curl_init("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send");
-                curl_setopt_array($ch, [
-                    CURLOPT_POST           => true,
-                    CURLOPT_HTTPHEADER     => ["Authorization: Bearer {$bearerToken}", 'Content-Type: application/json'],
-                    CURLOPT_POSTFIELDS     => json_encode(['message' => $fcmMsg]),
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_TIMEOUT        => 10,
-                ]);
-                $fcmRes  = curl_exec($ch);
-                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                $decoded  = json_decode($fcmRes, true);
-                $campaign['fcm_sent'] = ($httpCode === 200 && empty($decoded['error']));
-                if (!$campaign['fcm_sent']) {
-                    $campaign['fcm_error'] = $decoded['error']['message'] ?? "HTTP {$httpCode}";
+                    // Token-based group send — FCM topics require app-side subscribeToTopic() which is not guaranteed
+                    $tokens = $this->fetchGroupTokens($audience);
+                    if (!empty($tokens)) {
+                        $result = $this->sendFcmBatch($tokens, $bearerToken, $projectId, $title, $message, $platformCfg);
+                        $campaign['fcm_sent']       = $result['sent'] > 0;
+                        $campaign['fcm_sent_count'] = $result['sent'];
+                        if ($result['failed'] > 0) {
+                            $campaign['fcm_error'] = "{$result['failed']} token(s) failed to deliver.";
+                        }
+                    } else {
+                        $campaign['fcm_sent']  = false;
+                        $campaign['fcm_error'] = 'No registered devices found for this audience.';
+                    }
                 }
             } else {
                 $campaign['fcm_error'] = 'Failed to obtain FCM access token — check service account JSON in Integrations.';
@@ -240,7 +240,10 @@ class NotificationsController {
         if ($isSpecific && empty($fcmToken)) {
             $msg = 'Campaign saved. This user has no FCM token registered — notification not delivered.';
         } elseif ($campaign['fcm_sent']) {
-            $msg = 'Notification sent via Firebase FCM.';
+            $count = $campaign['fcm_sent_count'] ?? null;
+            $msg   = $count !== null
+                ? "Notification sent to {$count} device(s) via Firebase FCM."
+                : 'Notification sent via Firebase FCM.';
         } else {
             $err = $campaign['fcm_error'] ?? '';
             $msg = empty($saJson)
@@ -250,6 +253,76 @@ class NotificationsController {
 
         echo json_encode(['success' => true, 'message' => $msg]);
         exit;
+    }
+
+    private function fetchGroupTokens(string $audience): array {
+        $base = ['select' => 'fcm_token', 'fcm_token' => 'not.is.null', 'deleted_at' => 'is.null'];
+
+        $rows = match($audience) {
+            'active_drivers'  => $this->db->select('drivers',    $base + ['status' => 'eq.approved']),
+            'pending_drivers' => $this->db->select('drivers',    $base + ['status' => 'eq.pending']),
+            'all_drivers'     => $this->db->select('drivers',    $base),
+            'all_passengers'  => $this->db->select('passengers', $base),
+            default           => array_merge(
+                $this->db->select('drivers',    $base),
+                $this->db->select('passengers', $base)
+            ),
+        };
+
+        return array_values(array_unique(array_filter(array_column($rows, 'fcm_token'))));
+    }
+
+    private function sendFcmBatch(
+        array $tokens,
+        string $bearerToken,
+        string $projectId,
+        string $title,
+        string $message,
+        array $platformCfg
+    ): array {
+        $url     = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
+        $headers = ["Authorization: Bearer {$bearerToken}", 'Content-Type: application/json'];
+        $sent    = 0;
+        $failed  = 0;
+
+        foreach (array_chunk($tokens, 50) as $chunk) {
+            $mh      = curl_multi_init();
+            $handles = [];
+
+            foreach ($chunk as $token) {
+                $body = json_encode(['message' => array_merge([
+                    'token'        => $token,
+                    'notification' => ['title' => $title, 'body' => $message],
+                    'data'         => ['click_action' => 'FLUTTER_NOTIFICATION_CLICK'],
+                ], $platformCfg)]);
+
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [
+                    CURLOPT_POST           => true,
+                    CURLOPT_HTTPHEADER     => $headers,
+                    CURLOPT_POSTFIELDS     => $body,
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT        => 15,
+                ]);
+                curl_multi_add_handle($mh, $ch);
+                $handles[] = $ch;
+            }
+
+            $running = null;
+            do {
+                curl_multi_exec($mh, $running);
+                if ($running) curl_multi_select($mh);
+            } while ($running > 0);
+
+            foreach ($handles as $ch) {
+                curl_getinfo($ch, CURLINFO_HTTP_CODE) === 200 ? $sent++ : $failed++;
+                curl_multi_remove_handle($mh, $ch);
+            }
+
+            curl_multi_close($mh);
+        }
+
+        return ['sent' => $sent, 'failed' => $failed];
     }
 
     private function loadCampaigns(): array {

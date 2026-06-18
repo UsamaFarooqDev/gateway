@@ -51,6 +51,11 @@ class SupabaseDB {
         return json_decode($body, true);
     }
 
+    public function rpcWithStatus(string $fn, array $params = []): array {
+        [$code, , $body] = $this->curl('POST', $this->rest . '/rpc/' . $fn, $params);
+        return ['code' => $code, 'data' => json_decode($body, true)];
+    }
+
     /**
      * Execute multiple SELECT queries in parallel via curl_multi.
      * @param array $queries  Each item: ['table'=>string, 'params'=>array, 'withCount'=>bool]
