@@ -20,6 +20,16 @@ $adminInitials = strtoupper(substr($adminName, 0, 1) . (strpos($adminName, ' ') 
   <link rel="stylesheet" href="assets/css/theme.css">
 
   <link rel="icon" href="assets/img/logo.png" type="image/svg+xml">
+  <script>
+  if(localStorage.getItem('pc_sidebar_collapsed')==='1'){
+    document.documentElement.classList.add('sidebar-will-collapse');
+  }
+  </script>
+  <style>
+  .sidebar-will-collapse .sidebar{width:72px!important}
+  .sidebar-will-collapse .page-body{margin-left:72px!important;width:calc(100% - 72px)!important}
+  .sidebar-will-collapse .top-header{left:72px!important}
+  </style>
 </head>
 <body>
 

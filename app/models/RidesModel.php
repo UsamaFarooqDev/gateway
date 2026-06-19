@@ -233,8 +233,8 @@ class RidesModel {
         }
 
         return array_map(function ($r) use ($driverMap, $passengerMap) {
-            $driver    = $driverMap[$r['driver_id']] ?? null;
-            $passenger = $passengerMap[$r['user_id']] ?? null;
+            $driver    = isset($r['driver_id']) ? ($driverMap[$r['driver_id']] ?? null) : null;
+            $passenger = isset($r['user_id']) ? ($passengerMap[$r['user_id']] ?? null) : null;
             return [
                 ...$r,
                 'fare'            => $r['final_fare'] ?? $r['fare_eur'],

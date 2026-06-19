@@ -8,10 +8,15 @@ define('SUPABASE_SERVICE_ROLE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3
 class SupabaseDB {
     private string $rest;
     private string $key;
+    private bool $lastOk = true;
 
     public function __construct(bool $useServiceRole = true) {
         $this->rest = SUPABASE_URL . '/rest/v1';
         $this->key  = $useServiceRole ? SUPABASE_SERVICE_ROLE_KEY : SUPABASE_ANON_KEY;
+    }
+
+    public function lastRequestOk(): bool {
+        return $this->lastOk;
     }
 
     public function select(string $table, array $params = [], bool $withCount = false): array {
@@ -20,10 +25,12 @@ class SupabaseDB {
         if ($qs) $url .= '?' . $qs;
         $extra = $withCount ? ['Prefer: count=exact'] : [];
         [$code, $headers, $body] = $this->curl('GET', $url, null, $extra);
-        if ($code >= 400) {
+        if ($code === 0 || $code >= 400) {
+            $this->lastOk = false;
             error_log("Supabase select error {$code} [{$table}]: {$body}");
             return $withCount ? ['data' => [], 'count' => 0] : [];
         }
+        $this->lastOk = true;
         $rows = json_decode($body, true) ?? [];
         if ($withCount) {
             preg_match('/content-range:\s*\S+\/(\d+|\*)/i', $headers, $m);
@@ -207,8 +214,11 @@ class SupabaseDB {
         $raw     = curl_exec($ch);
         $hdrSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
         $code    = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        // curl_close() deprecated in PHP 8.5 — GC handles cleanup automatically
-        if ($raw === false) return [0, '', ''];
+        if ($raw === false) {
+            $err = curl_error($ch);
+            error_log("cURL error ({$method} {$url}): {$err}");
+            return [0, '', ''];
+        }
         return [$code, substr($raw, 0, $hdrSize), substr($raw, $hdrSize)];
     }
 }
