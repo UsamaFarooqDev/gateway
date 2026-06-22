@@ -1,11 +1,13 @@
 /* PowerCabs Admin — Shared Ride Invoice Generator (preview + PDF download) */
 
 const INVOICE_COMMISSION_PCT = 10;
-let _invoiceData     = {};
+let _invoiceData      = {};
 let _currentInvoiceId = null;
+let _driverMode       = false;
 
-function setInvoiceData(map) {
-  _invoiceData = map || {};
+function setInvoiceData(map, driverMode) {
+  _invoiceData  = map || {};
+  _driverMode   = !!driverMode;
 }
 
 function escHtml(s) {
@@ -33,6 +35,8 @@ function invLine(label, value, valueColor) {
 }
 
 function buildInvoiceHtml(r, id) {
+  if (_driverMode) return buildDriverInvoiceHtml(r, id);
+
   const fare        = parseFloat(r.fare) || 0;
   const commission  = fare * INVOICE_COMMISSION_PCT / 100;
   const driverEarns = fare - commission;
@@ -100,6 +104,216 @@ function buildInvoiceHtml(r, id) {
       <div>This is a computer-generated invoice and does not require a signature.</div>
       <div style="margin-top:3px">PowerCabs · powercabs.ie · support@powercabs.ie</div>
     </div>
+  </div>`;
+}
+
+/* ─── Driver-mode invoice templates ────────────────────────────────
+   Used when a specific driver is filtered in Invoice Management.
+   Matches the PowerCabs weekly driver statement format. ──────────── */
+
+function _vehicleLabel(vt) {
+  try {
+    const arr = Array.isArray(vt) ? vt : JSON.parse(vt || '[]');
+    return arr.map(v => v.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())).join(' / ') || 'Economy';
+  } catch { return 'Economy'; }
+}
+
+function _pcCompanyBlock() {
+  return `<div style="margin-top:10px;font-size:11px;line-height:1.75;color:#1a1a2e">
+    <div style="font-weight:700;font-size:11.5px">POWERCABS IRELAND LIMITED</div>
+    <div>Address: Inchicore Dublin</div>
+    <div>Telephone: 01 2030 727</div>
+    <div>Email: Info@powercabs.ie</div>
+    <div>Website: www.PowerCabs.ie</div>
+    <div>VAT: (TAX 04301619NH)</div>
+  </div>`;
+}
+
+function _pcFooterText() {
+  return `<div style="margin-top:22px;font-size:10.5px;color:#555;line-height:1.8;border-top:1px solid #E2E8F0;padding-top:14px">
+    <div>Any queries regarding Payment/Errors, please email the accounts
+      <a href="mailto:accounts@powercabs.ie" style="color:#F37A20;text-decoration:none">accounts@powercabs.ie</a>
+    </div>
+    <div>All Payments will be made in Euros to the provided IBAN by drivers.</div>
+    <div>Negative amounts owe to PCLI will be charge in next invoice or by IBAN.</div>
+    <div style="font-weight:700;margin-top:5px">Thanks for your dedication and choosing PowerCabs Ireland Limited.</div>
+  </div>`;
+}
+
+function _eur(n) { return '€' + n.toFixed(2); }
+
+function _payoutTable(jobs, prepaid, cash, gross, commission, net, toll) {
+  return `
+  <div style="font-weight:700;font-size:12px;text-decoration:underline;margin-bottom:8px">Total Payout Breakdown</div>
+  <table style="border-collapse:collapse;font-size:12px;min-width:340px">
+    <tr><td style="padding:3px 12px 3px 0">Total Number of Jobs</td><td style="padding:3px 0;text-align:right;font-weight:600">${jobs.toString().padStart(2,'0')}</td></tr>
+    <tr><td style="padding:3px 12px 3px 0">PrePaid Jobs Amount</td><td style="padding:3px 0;text-align:right">${_eur(prepaid)}</td></tr>
+    <tr><td style="padding:3px 12px 3px 0">Cash Collected by Driver</td><td style="padding:3px 0;text-align:right">${_eur(cash)}</td></tr>
+    <tr style="font-weight:700;border-top:2px solid #1a1a2e;border-bottom:1px solid #1a1a2e">
+      <td style="padding:5px 12px 5px 0">Total Gross Pay</td><td style="padding:5px 0;text-align:right">${_eur(gross)}</td>
+    </tr>
+    <tr style="font-weight:700"><td style="padding:3px 12px 3px 0">PCLI Commission</td><td style="padding:3px 0;text-align:right">10%</td></tr>
+    <tr><td style="padding:3px 12px 3px 0">PCLI Revenue</td><td style="padding:3px 0;text-align:right">${_eur(commission)}</td></tr>
+    <tr><td style="padding:3px 12px 3px 0">Driver's Net Earnings</td><td style="padding:3px 0;text-align:right">${_eur(net)}</td></tr>
+    <tr><td style="padding:3px 12px 3px 0">Tolls</td><td style="padding:3px 0;text-align:right">${_eur(toll)}</td></tr>
+    <tr><td style="padding:3px 12px 3px 0">Driver Peaktime Incentive</td><td style="padding:3px 0;text-align:right">€0.00</td></tr>
+    <tr style="font-weight:700;border-top:2px solid #1a1a2e;border-bottom:1px solid #1a1a2e">
+      <td style="padding:5px 12px 5px 0">Owed to Driver</td><td style="padding:5px 0;text-align:right">${_eur(net + toll)}</td>
+    </tr>
+    <tr style="font-weight:700">
+      <td style="padding:4px 12px 4px 0">Owed to PowerCabs</td>
+      <td style="padding:4px 0;text-align:right">€0.00 <span style="font-size:9.5px;font-weight:400">In case of Negative Balance</span></td>
+    </tr>
+  </table>`;
+}
+
+function buildDriverInvoiceHtml(r, id) {
+  const fareEur    = parseFloat(r.fare_eur)      || 0;
+  const finalFare  = parseFloat(r.final_fare)    || fareEur;
+  const charged    = parseFloat(r.total_charged) || finalFare;
+  const toll       = parseFloat(r.toll)          || 0;
+  const commission = charged * INVOICE_COMMISSION_PCT / 100;
+  const net        = charged - commission;
+  const invoiceNo  = 'PC-' + id.slice(0, 8).toUpperCase();
+
+  const payMethod = r.payment_method || 'Cash';
+  const isCard    = /card|wallet|stripe/i.test(payMethod);
+  const prepaid   = isCard ? charged : 0;
+  const cash      = isCard ? 0 : charged;
+
+  const vehicleType = _vehicleLabel(r.vehicle_type);
+
+  const rideRow = `
+    <tr>
+      <td style="padding:7px 8px;border:1px solid #ddd">${escHtml(fmtDate(r.created_at))}</td>
+      <td style="padding:7px 8px;border:1px solid #ddd">${escHtml(payMethod)}</td>
+      <td style="padding:7px 8px;border:1px solid #ddd">${escHtml(vehicleType)}</td>
+      <td style="padding:7px 8px;border:1px solid #ddd">${escHtml(r.dest_addr || '—')}</td>
+      <td style="padding:7px 8px;border:1px solid #ddd;text-align:right">€${fareEur.toFixed(2)}</td>
+      <td style="padding:7px 8px;border:1px solid #ddd;text-align:right;font-weight:600">€${finalFare.toFixed(2)}</td>
+    </tr>
+    <tr>
+      <td colspan="6" style="padding:3px 8px;font-size:10px;color:#888;border:1px solid #ddd;border-top:none">
+        Ride ID: ${escHtml(id)} &nbsp;|&nbsp; Pickup: ${escHtml(r.pickup_addr || '—')}
+      </td>
+    </tr>`;
+
+  return `
+  <div id="invoicePrintArea" style="font-family:'Poppins',Arial,sans-serif;color:#1a1a2e;padding:32px;background:#fff">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #F37A20;padding-bottom:18px;margin-bottom:18px">
+      <div>
+        <img src="assets/img/logo.png" alt="PowerCabs" style="height:48px;object-fit:contain">
+        ${_pcCompanyBlock()}
+      </div>
+      <div>
+        <table style="font-size:11.5px;border-collapse:collapse">
+          <tr><td style="padding:2px 20px 2px 0;color:#555">Document Number</td><td style="font-weight:700">${escHtml(invoiceNo)}</td></tr>
+          <tr><td style="padding:2px 20px 2px 0;color:#555">Date Issued</td><td style="font-weight:700">${escHtml(fmtDate(r.created_at))}</td></tr>
+          <tr><td style="padding:2px 20px 2px 0;color:#555">Cycle</td><td style="font-weight:700">Per Trip</td></tr>
+          <tr><td style="padding:2px 20px 2px 0;color:#555">Driver's Name</td><td style="font-weight:700">${escHtml(r.driver_name || '—')}</td></tr>
+          <tr><td style="padding:2px 20px 2px 0;color:#555">Driver's Phone</td><td style="font-weight:700">${escHtml(r.driver_phone || '—')}</td></tr>
+          <tr><td style="padding:2px 20px 2px 0;color:#555">Driver's License</td><td style="font-weight:700">${escHtml(r.driver_license || '—')}</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div style="text-align:center;font-size:12.5px;font-weight:600;margin-bottom:16px">
+      Your PowerCabs trip details for ${escHtml(fmtDate(r.created_at))}
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:22px">
+      <thead>
+        <tr style="background:#F8FAFC">
+          <th style="text-align:left;padding:7px 8px;border:1px solid #ddd;font-size:10px;text-transform:uppercase">Date/Time</th>
+          <th style="text-align:left;padding:7px 8px;border:1px solid #ddd;font-size:10px;text-transform:uppercase">Payment Method</th>
+          <th style="text-align:left;padding:7px 8px;border:1px solid #ddd;font-size:10px;text-transform:uppercase">Vehicle Type</th>
+          <th style="text-align:left;padding:7px 8px;border:1px solid #ddd;font-size:10px;text-transform:uppercase">Destination</th>
+          <th style="text-align:right;padding:7px 8px;border:1px solid #ddd;font-size:10px;text-transform:uppercase">Est. Fare</th>
+          <th style="text-align:right;padding:7px 8px;border:1px solid #ddd;font-size:10px;text-transform:uppercase">Meter Fare</th>
+        </tr>
+      </thead>
+      <tbody>${rideRow}</tbody>
+    </table>
+
+    ${_payoutTable(1, prepaid, cash, charged, commission, net, toll)}
+    ${_pcFooterText()}
+  </div>`;
+}
+
+function buildDriverStatementHtml(data) {
+  const period = (data.date_from || data.date_to)
+    ? `${data.date_from || 'Start'} to ${data.date_to || 'Today'}`
+    : 'All time';
+
+  let totalGross = 0, totalCommission = 0, totalPrepaid = 0, totalCash = 0, totalToll = 0;
+  const rowsHtml = data.rows.map(r => {
+    const fareEur   = parseFloat(r.fare_eur)   || 0;
+    const finalFare = parseFloat(r.final_fare) || fareEur;
+    const charged   = parseFloat(r.fare)       || finalFare;
+    const toll      = parseFloat(r.toll)       || 0;
+    const isCard    = /card|wallet|stripe/i.test(r.payment_method || '');
+    totalGross      += charged;
+    totalCommission += r.commission;
+    totalPrepaid    += isCard ? charged : 0;
+    totalCash       += isCard ? 0 : charged;
+    totalToll       += toll;
+    return `
+      <tr style="border-bottom:1px solid #E2E8F0">
+        <td style="padding:6px 8px;font-size:11px">${escHtml(fmtDate(r.date))}</td>
+        <td style="padding:6px 8px;font-size:11px">${escHtml(r.payment_method || 'Cash')}</td>
+        <td style="padding:6px 8px;font-size:11px">${escHtml(_vehicleLabel(r.vehicle_type))}</td>
+        <td style="padding:6px 8px;font-size:11px">${escHtml(r.dest || '—')}</td>
+        <td style="padding:6px 8px;font-size:11px;text-align:right">€${fareEur.toFixed(2)}</td>
+        <td style="padding:6px 8px;font-size:11px;text-align:right;font-weight:600">€${finalFare.toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td colspan="6" style="padding:2px 8px;font-size:10px;color:#888;border-bottom:1px solid #F0F2F5">
+          Ride ID: ${escHtml(r.id.slice(0,8).toUpperCase())} &nbsp;|&nbsp; Pickup: ${escHtml(r.pickup || '—')}
+        </td>
+      </tr>`;
+  }).join('');
+
+  const totalNet  = totalGross - totalCommission;
+
+  return `
+  <div id="statementPrintArea" style="font-family:'Poppins',Arial,sans-serif;color:#1a1a2e;padding:32px;background:#fff;width:780px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #F37A20;padding-bottom:18px;margin-bottom:18px">
+      <div>
+        <img src="assets/img/logo.png" alt="PowerCabs" style="height:48px;object-fit:contain">
+        ${_pcCompanyBlock()}
+      </div>
+      <div>
+        <table style="font-size:11.5px;border-collapse:collapse">
+          <tr><td style="padding:2px 20px 2px 0;color:#555">Document Number</td><td style="font-weight:700">PC-${new Date().toISOString().slice(0,10).replace(/-/g,'')}</td></tr>
+          <tr><td style="padding:2px 20px 2px 0;color:#555">Period</td><td style="font-weight:700">${escHtml(period)}</td></tr>
+          <tr><td style="padding:2px 20px 2px 0;color:#555">Cycle</td><td style="font-weight:700">Custom</td></tr>
+          <tr><td style="padding:2px 20px 2px 0;color:#555">Driver's Name</td><td style="font-weight:700">${escHtml(data.driver_name || '—')}</td></tr>
+          <tr><td style="padding:2px 20px 2px 0;color:#555">Driver's License</td><td style="font-weight:700">${escHtml(data.driver_license || '—')}</td></tr>
+          <tr><td style="padding:2px 20px 2px 0;color:#555">Generated</td><td style="font-weight:700">${escHtml(fmtDate(new Date().toISOString()))}</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div style="text-align:center;font-size:12.5px;font-weight:600;margin-bottom:16px">
+      Your PowerCabs tour overview for ${escHtml(period)}
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:22px;font-size:11.5px">
+      <thead>
+        <tr style="background:#F8FAFC">
+          <th style="text-align:left;padding:7px 8px;border:1px solid #ddd;font-size:10px;text-transform:uppercase">Date/Time</th>
+          <th style="text-align:left;padding:7px 8px;border:1px solid #ddd;font-size:10px;text-transform:uppercase">Payment Method</th>
+          <th style="text-align:left;padding:7px 8px;border:1px solid #ddd;font-size:10px;text-transform:uppercase">Vehicle Type</th>
+          <th style="text-align:left;padding:7px 8px;border:1px solid #ddd;font-size:10px;text-transform:uppercase">Destination</th>
+          <th style="text-align:right;padding:7px 8px;border:1px solid #ddd;font-size:10px;text-transform:uppercase">Est. Fare</th>
+          <th style="text-align:right;padding:7px 8px;border:1px solid #ddd;font-size:10px;text-transform:uppercase">Meter Fare</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+
+    ${_payoutTable(data.rows.length, totalPrepaid, totalCash, totalGross, totalCommission, totalNet, totalToll)}
+    ${_pcFooterText()}
   </div>`;
 }
 
@@ -341,8 +555,10 @@ function renderHtmlToPdf(html, areaId, filename, done) {
 }
 
 function buildStatementPdf(data, done) {
-  const filename = `PowerCabs-Invoice-Statement-${new Date().toISOString().slice(0, 10)}.pdf`;
-  renderHtmlToPdf(buildStatementHtml(data), 'statementPrintArea', filename, done);
+  const driverSlug = data.driver_name ? data.driver_name.replace(/\s+/g, '-') : 'Statement';
+  const filename   = `PowerCabs-${driverSlug}-${new Date().toISOString().slice(0, 10)}.pdf`;
+  const html       = data.driver_mode ? buildDriverStatementHtml(data) : buildStatementHtml(data);
+  renderHtmlToPdf(html, 'statementPrintArea', filename, done);
 }
 
 /* ─── Corporate account invoice (client-facing — no commission

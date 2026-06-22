@@ -56,6 +56,11 @@ class DriversController {
         $action = $_POST['action'] ?? '';
         $id     = (int)($_POST['id'] ?? 0);
 
+        if ($action === 'add_driver') {
+            $this->handleAddDriver();
+            return;
+        }
+
         if ($action === 'update_status' && !empty($_POST['id'])) {
             $id     = $_POST['id'];  // UUID string
             $status = $_POST['status'] ?? '';
@@ -108,6 +113,59 @@ class DriversController {
         }
 
         echo json_encode(['success' => false, 'message' => 'Unknown action.']);
+        exit;
+    }
+
+    private function handleAddDriver(): void {
+        $fullName     = trim($_POST['full_name']     ?? '');
+        $email        = trim($_POST['email']         ?? '');
+        $password     = $_POST['password']           ?? '';
+        $phone        = trim($_POST['phone']         ?? '');
+        $vehicleMake  = trim($_POST['vehicle_make']  ?? '');
+        $vehicleModel = trim($_POST['vehicle_model'] ?? '');
+        $plateNo      = trim(strtoupper($_POST['plate_no'] ?? ''));
+        $vehicleNo    = trim(strtoupper($_POST['vehicle_number'] ?? ''));
+        $noSeats      = (int)($_POST['no_seats']     ?? 4);
+        $status       = in_array($_POST['status'] ?? '', ['approved', 'pending'], true) ? $_POST['status'] : 'pending';
+
+        if ($fullName === '' || $email === '' || $password === '') {
+            echo json_encode(['success' => false, 'message' => 'Full name, email, and password are required.']);
+            exit;
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            echo json_encode(['success' => false, 'message' => 'Invalid email address.']);
+            exit;
+        }
+        if (strlen($password) < 8) {
+            echo json_encode(['success' => false, 'message' => 'Password must be at least 8 characters.']);
+            exit;
+        }
+
+        $authResult = $this->db->createAuthUser($email, $password, $fullName);
+        if (isset($authResult['error'])) {
+            echo json_encode(['success' => false, 'message' => 'Auth error: ' . $authResult['error']]);
+            exit;
+        }
+
+        $authId = $authResult['id'] ?? null;
+        if (!$authId) {
+            echo json_encode(['success' => false, 'message' => 'Auth user created but no ID returned.']);
+            exit;
+        }
+
+        $result = $this->model->createDriver($authId, [
+            'full_name'      => $fullName,
+            'email'          => $email,
+            'phone'          => $phone,
+            'vehicle_make'   => $vehicleMake,
+            'vehicle_model'  => $vehicleModel,
+            'plate_no'       => $plateNo,
+            'vehicle_number' => $vehicleNo,
+            'no_seats'       => $noSeats,
+            'status'         => $status,
+        ]);
+
+        echo json_encode($result);
         exit;
     }
 }

@@ -156,6 +156,35 @@ class SupabaseDB {
         return $code >= 200 && $code < 300;
     }
 
+    public function createAuthUser(string $email, string $password, string $fullName): array {
+        $url = SUPABASE_URL . '/auth/v1/admin/users';
+        $ch  = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_CUSTOMREQUEST  => 'POST',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER     => [
+                'apikey: '               . SUPABASE_SERVICE_ROLE_KEY,
+                'Authorization: Bearer ' . SUPABASE_SERVICE_ROLE_KEY,
+                'Content-Type: application/json',
+            ],
+            CURLOPT_POSTFIELDS => json_encode([
+                'email'         => $email,
+                'password'      => $password,
+                'email_confirm' => true,
+                'user_metadata' => ['full_name' => $fullName, 'role' => 'driver'],
+            ]),
+            CURLOPT_TIMEOUT => 15,
+        ]);
+        $body = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        if ($code < 200 || $code >= 300) {
+            error_log("Supabase createAuthUser error {$code}: {$body}");
+            $msg = json_decode($body, true)['msg'] ?? (json_decode($body, true)['message'] ?? 'Auth user creation failed.');
+            return ['error' => $msg];
+        }
+        return json_decode($body, true) ?? [];
+    }
+
     public function deleteAuthUser(string $userId): bool {
         $url = SUPABASE_URL . '/auth/v1/admin/users/' . rawurlencode($userId);
         $ch  = curl_init($url);

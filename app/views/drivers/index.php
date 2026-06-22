@@ -33,7 +33,6 @@ function vehicleTypeBadge(mixed $typeInput): string {
     $out = '';
     foreach ($types as $t) {
         $label = null;
-        $emoji = null;
         if (is_array($t)) {
             $label = $t['label']      ?? null;
             $emoji = $t['icon_emoji'] ?? null;
@@ -130,7 +129,7 @@ $expiryAlerts = array_filter($drivers, function($d) use ($alertWindow) {
       ?>
       <span style="font-size:12px;padding:3px 10px;border-radius:99px;background:<?= $isExpired?'#FEE2E2':'#FEF3C7'?>;color:<?= $isExpired?'#dc2626':'#92400e'?>;border:1px solid <?= $isExpired?'#fca5a5':'#fbbf24'?>">
         <?= htmlspecialchars($d['full_name']??'') ?> —
-        <?= $isExpired ? 'EXPIRED ' . abs($days) . ' day'.(abs($days)>1?'s':'').' ago' : 'expires in '.$days.' day'.($days>1?'s':'') ?>
+        <?= $isExpired ? 'EXPIRED ' . abs($days) . ' day' . (abs($days) > 1 ? 's' : '') . ' ago' : "expires in {$days} day" . ($days > 1 ? 's' : '') ?>
       </span>
       <?php endforeach; ?>
     </div>
@@ -165,7 +164,7 @@ $expiryAlerts = array_filter($drivers, function($d) use ($alertWindow) {
       ['suspended', 'Suspended',       $counts['suspended'], 'bi-slash-circle',    '#dc2626'],
   ];
   foreach ($strips as [$slug, $label, $count, $icon, $color]):
-      $isActive = ($activeFilter === $slug);
+      $isActive = $activeFilter === $slug;
   ?>
   <a href="?page=drivers&status=<?= $slug ?>&search=<?= urlencode($searchQuery) ?>"
      style="display:flex;align-items:center;gap:10px;padding:12px 18px;background:<?= $isActive ? 'rgba(243,122,32,0.10)' : '#fff' ?>;border:1px solid <?= $isActive ? '#F37A20' : 'var(--border)' ?>;border-radius:var(--radius-sm);text-decoration:none;transition:var(--t);min-width:140px;box-shadow:var(--shadow-sm)">
@@ -401,30 +400,87 @@ $expiryAlerts = array_filter($drivers, function($d) use ($alertWindow) {
 
 <!-- Add Driver Modal -->
 <div class="modal-overlay" id="addDriverModal">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:620px">
     <div class="modal-header">
       <i class="bi bi-person-plus-fill" style="color:var(--accent);font-size:20px"></i>
       <span class="modal-title">Add New Driver</span>
       <button class="modal-close" onclick="Modal.close('addDriverModal')"><i class="bi bi-x"></i></button>
     </div>
     <div class="modal-body">
+
+      <p style="font-size:12px;color:var(--text-muted);margin:0 0 16px">
+        Creates a Supabase Auth account and a driver profile. The driver can log in immediately with the password you set.
+      </p>
+
+      <!-- Section: Account -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent);margin-bottom:10px">Account Details</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+        <div style="grid-column:1/-1">
+          <label class="form-label">Full Name <span style="color:#dc2626">*</span></label>
+          <input type="text" id="adName" class="glass-input" placeholder="John Murphy" autocomplete="off">
+        </div>
+        <div>
+          <label class="form-label">Email <span style="color:#dc2626">*</span></label>
+          <input type="email" id="adEmail" class="glass-input" placeholder="john@example.com" autocomplete="off">
+        </div>
+        <div>
+          <label class="form-label">Phone</label>
+          <input type="tel" id="adPhone" class="glass-input" placeholder="+353 87 000 0000">
+        </div>
+        <div>
+          <label class="form-label">Temporary Password <span style="color:#dc2626">*</span></label>
+          <div style="position:relative">
+            <input type="password" id="adPassword" class="glass-input" placeholder="Min. 8 characters" style="padding-right:42px" autocomplete="new-password">
+            <button type="button" onclick="togglePwd()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;padding:2px">
+              <i class="bi bi-eye" id="adPwdEye"></i>
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Initial Status</label>
+          <select id="adStatus" class="glass-select" style="width:100%">
+            <option value="pending">Pending Review</option>
+            <option value="approved">Approved</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Section: Vehicle -->
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--accent);margin-bottom:10px">Vehicle Details</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div style="grid-column:1/-1"><label class="form-label">Full Name</label><input type="text" class="glass-input" placeholder="John Murphy"></div>
-        <div><label class="form-label">Email</label><input type="email" class="glass-input" placeholder="john@example.com"></div>
-        <div><label class="form-label">Phone</label><input type="tel" class="glass-input" placeholder="+353 87..."></div>
-        <div><label class="form-label">Vehicle Make</label><input type="text" class="glass-input" placeholder="Toyota"></div>
-        <div><label class="form-label">Vehicle Model</label><input type="text" class="glass-input" placeholder="Corolla"></div>
-        <div><label class="form-label">Plate Number</label><input type="text" class="glass-input" placeholder="192-D-12345"></div>
-        <div><label class="form-label">No. of Seats</label><input type="number" class="glass-input" placeholder="4" min="1" max="16"></div>
+        <div>
+          <label class="form-label">Vehicle Make</label>
+          <input type="text" id="adVehicleMake" class="glass-input" placeholder="Toyota">
+        </div>
+        <div>
+          <label class="form-label">Vehicle Model</label>
+          <input type="text" id="adVehicleModel" class="glass-input" placeholder="Corolla">
+        </div>
+        <div>
+          <label class="form-label">Plate Number</label>
+          <input type="text" id="adPlateNo" class="glass-input" placeholder="192-D-12345" style="text-transform:uppercase">
+        </div>
+        <div>
+          <label class="form-label">Vehicle / Board Number</label>
+          <input type="text" id="adVehicleNo" class="glass-input" placeholder="e.g. N3433" style="text-transform:uppercase">
+        </div>
+        <div>
+          <label class="form-label">No. of Seats</label>
+          <select id="adSeats" class="glass-select" style="width:100%">
+            <option value="4">4 seats (Economy)</option>
+            <option value="5">5 seats (Economy XL)</option>
+            <option value="6">6 seats</option>
+            <option value="7">7 seats</option>
+            <option value="8">8 seats</option>
+          </select>
+        </div>
       </div>
-      <div class="mt-3"><label class="form-label">Initial Status</label>
-        <select class="glass-select"><option value="pending">Pending Review</option><option value="active">Active</option></select>
-      </div>
+
     </div>
     <div class="modal-footer">
       <button class="btn-glass" onclick="Modal.close('addDriverModal')"><i class="bi bi-x"></i> Cancel</button>
-      <button class="btn-primary-glass" onclick="Toast.show('Driver registration via Supabase Auth coming soon.','info')">
-        <i class="bi bi-check-lg"></i> Save Driver
+      <button class="btn-primary-glass" id="adSaveBtn" onclick="submitAddDriver()">
+        <i class="bi bi-check-lg"></i> Create Driver
       </button>
     </div>
   </div>
@@ -693,6 +749,75 @@ async function _doUpdateStatus(id, status, btn) {
 
 function exportDrivers() {
   Toast.show('Export feature coming soon.', 'info');
+}
+
+function togglePwd() {
+  const inp = document.getElementById('adPassword');
+  const eye = document.getElementById('adPwdEye');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    eye.className = 'bi bi-eye-slash';
+  } else {
+    inp.type = 'password';
+    eye.className = 'bi bi-eye';
+  }
+}
+
+async function submitAddDriver() {
+  const name     = document.getElementById('adName').value.trim();
+  const email    = document.getElementById('adEmail').value.trim();
+  const password = document.getElementById('adPassword').value;
+  const phone    = document.getElementById('adPhone').value.trim();
+  const make     = document.getElementById('adVehicleMake').value.trim();
+  const model    = document.getElementById('adVehicleModel').value.trim();
+  const plate    = document.getElementById('adPlateNo').value.trim();
+  const vehNo    = document.getElementById('adVehicleNo').value.trim();
+  const seats    = document.getElementById('adSeats').value;
+  const status   = document.getElementById('adStatus').value;
+
+  if (!name)            { Toast.show('Full name is required.', 'error');         return; }
+  if (!email)           { Toast.show('Email is required.', 'error');              return; }
+  if (password.length < 8) { Toast.show('Password must be at least 8 characters.', 'error'); return; }
+
+  const btn = document.getElementById('adSaveBtn');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating…';
+
+  const fd = new FormData();
+  fd.append('action',         'add_driver');
+  fd.append('full_name',      name);
+  fd.append('email',          email);
+  fd.append('password',       password);
+  fd.append('phone',          phone);
+  fd.append('vehicle_make',   make);
+  fd.append('vehicle_model',  model);
+  fd.append('plate_no',       plate);
+  fd.append('vehicle_number', vehNo);
+  fd.append('no_seats',       seats);
+  fd.append('status',         status);
+
+  try {
+    const res  = await fetch(window.location.href, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.success) {
+      Toast.show(data.message || 'Driver created.', 'success');
+      Modal.close('addDriverModal');
+      // clear form
+      ['adName','adEmail','adPassword','adPhone','adVehicleMake','adVehicleModel','adPlateNo','adVehicleNo'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      Toast.show(data.message || 'Failed to create driver.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
+  } catch {
+    Toast.show('Network error — please try again.', 'error');
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
 }
 
 // ── Keyup live search ────────────────────────────────────────────────

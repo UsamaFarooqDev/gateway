@@ -12,6 +12,31 @@ class DriverModel {
         'suitability' => 'suitability_cert',
     ];
 
+    public function createDriver(string $authId, array $data): array {
+        $now = date('c');
+
+        $row = [
+            'id'            => $authId,
+            'full_name'     => $data['full_name'],
+            'email'         => $data['email'],
+            'phone'         => $data['phone']          ?? null,
+            'vehicle_make'  => $data['vehicle_make']   ?? null,
+            'vehicle_model' => $data['vehicle_model']  ?? null,
+            'plate_no'      => $data['plate_no']       ?? null,
+            'vehicle_number'=> $data['vehicle_number'] ?? null,
+            'no_seats'      => isset($data['no_seats']) ? (int)$data['no_seats'] : 4,
+            'status'        => in_array($data['status'] ?? '', ['approved', 'pending'], true) ? $data['status'] : 'pending',
+            'is_online'     => false,
+            'created_at'    => $now,
+            'updated_at'    => $now,
+        ];
+
+        $inserted = $this->db->insert('drivers', $row);
+        if (!$inserted) return ['success' => false, 'message' => 'Auth user created but failed to insert driver profile. The user exists in Supabase Auth — delete them manually if needed.'];
+
+        return ['success' => true, 'id' => $authId, 'message' => 'Driver account created successfully.'];
+    }
+
     public function deleteDriver(string $id): array {
         $rows = $this->db->select('drivers', [
             'select'     => 'id,full_name,email',

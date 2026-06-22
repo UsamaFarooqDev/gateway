@@ -211,27 +211,45 @@ class FinanceController {
             }
         }
 
+        $driverMode = !empty($filters['driver_id']);
+
         $items = array_map(function ($r) {
-            $fare       = (float)($r['fare'] ?? 0);
-            $commission = round($fare * 0.10, 2);
+            $fareEur   = (float)($r['fare_eur'] ?? 0);
+            $finalFare = (float)($r['final_fare'] ?? $fareEur);
+            $charged   = (float)($r['total_charged'] ?? $finalFare) ?: $finalFare;
+            $commission = round($charged * 0.10, 2);
             return [
-                'id'         => $r['id'],
-                'date'       => $r['created_at'],
-                'passenger'  => $r['passenger_name'] ?? '—',
-                'driver'     => $r['driver_name'] ?? 'Unassigned',
-                'fare'       => round($fare, 2),
-                'commission' => $commission,
-                'earnings'   => round($fare - $commission, 2),
+                'id'             => $r['id'],
+                'date'           => $r['created_at'],
+                'passenger'      => $r['passenger_name'] ?? '—',
+                'driver'         => $r['driver_name'] ?? 'Unassigned',
+                'driver_id'      => $r['driver_id'] ?? '',
+                'driver_license' => $r['driver_license'] ?? '',
+                'driver_phone'   => $r['driver_phone'] ?? '',
+                'pickup'         => $r['pickup_addr'] ?? '—',
+                'dest'           => $r['dest_addr'] ?? '—',
+                'payment_method' => $r['payment_method'] ?? '',
+                'vehicle_type'   => $r['vehicle_type'] ?? null,
+                'fare_eur'       => round($fareEur, 2),
+                'final_fare'     => round($finalFare, 2),
+                'fare'           => round($charged, 2),
+                'commission'     => $commission,
+                'earnings'       => round($charged - $commission, 2),
             ];
         }, $rows);
 
+        $driverLicense = $items[0]['driver_license'] ?? '';
+
         echo json_encode([
-            'success'     => true,
-            'driver_name' => $driverName,
-            'date_from'   => $filters['date_from'],
-            'date_to'     => $filters['date_to'],
-            'stats'       => $stats,
-            'rows'        => $items,
+            'success'        => true,
+            'driver_mode'    => $driverMode,
+            'driver_name'    => $driverName,
+            'driver_id'      => $filters['driver_id'] ?? '',
+            'driver_license' => $driverLicense,
+            'date_from'      => $filters['date_from'],
+            'date_to'        => $filters['date_to'],
+            'stats'          => $stats,
+            'rows'           => $items,
         ]);
         exit;
     }

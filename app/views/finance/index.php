@@ -227,13 +227,22 @@ $txQs = 'tab=transactions'
 <?php
 $invoiceDataMap = [];
 foreach ($invoices as $r) {
+    $fareEur   = (float)($r['fare_eur'] ?? 0);
+    $finalFare = (float)($r['final_fare'] ?? $fareEur);
+    $total     = (float)($r['total_charged'] ?? $finalFare);
     $invoiceDataMap[$r['id']] = [
         'id'              => $r['id'],
-        'fare'            => number_format((float)($r['fare'] ?? 0), 2),
+        'fare'            => number_format($total ?: $finalFare, 2),
+        'fare_eur'        => number_format($fareEur, 2),
+        'final_fare'      => number_format($finalFare, 2),
+        'total_charged'   => number_format($total ?: $finalFare, 2),
+        'payment_method'  => $r['payment_method'] ?? '',
+        'vehicle_type'    => $r['vehicle_type'] ?? null,
         'created_at'      => $r['created_at'] ?? '',
         'pickup_addr'     => $r['pickup_addr'] ?? '',
         'dest_addr'       => $r['dest_addr'] ?? '',
         'driver_id'       => $r['driver_id'] ?? '',
+        'driver_license'  => $r['driver_license'] ?? '',
         'driver_name'     => $r['driver_name'] ?? '',
         'driver_phone'    => $r['driver_phone'] ?? '',
         'driver_email'    => $r['driver_email'] ?? '',
@@ -571,7 +580,8 @@ $extraScripts = '<script>'
     . '</script>';
 
 if ($tab === 'ride_invoices' && isset($invoiceDataJson)) {
-    $extraScripts .= '<script>setInvoiceData(' . $invoiceDataJson . ');loadPdfLibs(function(){});</script>';
+    $driverMode = $driverId !== '' ? 'true' : 'false';
+    $extraScripts .= '<script>setInvoiceData(' . $invoiceDataJson . ',' . $driverMode . ');loadPdfLibs(function(){});</script>';
 }
 if ($tab === 'invoices') {
     $extraScripts .= '<script>loadPdfLibs(function(){});</script>';

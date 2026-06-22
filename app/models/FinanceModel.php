@@ -257,7 +257,7 @@ class FinanceModel {
 
     public function getInvoiceRides(array $filters, int $page, int $perPage): array {
         $params            = $this->buildInvoiceParams($filters);
-        $params['select']  = 'id,status,fare_eur,final_fare,created_at,pickup_addr,dest_addr,user_id,driver_id,distance_km,duration_min';
+        $params['select']  = 'id,status,fare_eur,final_fare,total_charged,payment_method,created_at,pickup_addr,dest_addr,user_id,driver_id,distance_km,duration_min';
         $params['order']   = $this->sortClause($filters['sort'] ?? 'date_desc');
         $params['limit']   = $perPage;
         $params['offset']  = ($page - 1) * $perPage;
@@ -294,7 +294,7 @@ class FinanceModel {
 
     public function getAllForExport(array $filters): array {
         $params            = $this->buildInvoiceParams($filters);
-        $params['select']  = 'id,status,fare_eur,final_fare,created_at,pickup_addr,dest_addr,user_id,driver_id,distance_km,duration_min';
+        $params['select']  = 'id,status,fare_eur,final_fare,total_charged,payment_method,created_at,pickup_addr,dest_addr,user_id,driver_id,distance_km,duration_min';
         $params['order']   = $this->sortClause($filters['sort'] ?? 'date_desc');
         $params['limit']   = self::STATS_SCAN_LIMIT;
 
@@ -343,7 +343,7 @@ class FinanceModel {
         $userIds   = array_values(array_unique(array_filter(array_column($rows, 'user_id'))));
 
         $lookups = [];
-        if (!empty($driverIds)) $lookups['d'] = ['table'=>'drivers',    'params'=>['select'=>'id,full_name,phone,email','id'=>'in.('.implode(',', $driverIds).')']];
+        if (!empty($driverIds)) $lookups['d'] = ['table'=>'drivers',    'params'=>['select'=>'id,full_name,phone,email,type,license_number,vehicle_number,plate_no','id'=>'in.('.implode(',', $driverIds).')']];
         if (!empty($userIds))   $lookups['p'] = ['table'=>'passengers', 'params'=>['select'=>'id,name,phone,email','id'=>'in.('.implode(',', $userIds).')']];
 
         $driverMap    = [];
@@ -368,6 +368,8 @@ class FinanceModel {
                 'driver_name'     => $driver['full_name'] ?? null,
                 'driver_phone'    => $driver['phone'] ?? null,
                 'driver_email'    => $driver['email'] ?? null,
+                'vehicle_type'    => $driver['type'] ?? null,
+                'driver_license'  => $driver['license_number'] ?? $driver['vehicle_number'] ?? $driver['plate_no'] ?? null,
                 'passenger_name'  => $passenger['name'] ?? null,
                 'passenger_phone' => $passenger['phone'] ?? null,
                 'passenger_email' => $passenger['email'] ?? null,
