@@ -90,6 +90,7 @@ foreach ($drivers as $d) {
         'earnings'       => '€' . number_format((float)($d['total_earnings'] ?? 0), 2),
         'joined'         => !empty($d['created_at'])      ? date('d M Y', strtotime($d['created_at']))      : '—',
         'license_expiry' => !empty($d['license_expiry'])  ? date('d M Y', strtotime($d['license_expiry']))  : '—',
+        'iban'           => $ibanMap[$id] ?? '',
         'types'          => $currentTypeNames,
         'docs' => [
             ['type' => 'license',     'label' => 'Driving Licence',      'url' => $d['license_url']      ?? ''],
@@ -637,6 +638,7 @@ function viewDriver(id) {
     ['bi-cash-coin',   'Total Earnings',  d.earnings],
     ['bi-calendar',    'Joined',          d.joined],
     ['bi-card-list',   'Licence Expiry',  d.license_expiry],
+    ['bi-bank',        'IBAN',            d.iban || '—'],
   ];
 
   const grid = fields.map(([icon, label, val]) => `
@@ -930,6 +932,7 @@ async function submitAddDriver() {
               earnings:'€'+parseFloat(d.total_earnings||0).toFixed(2),
               joined: d.created_at ? new Date(d.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—',
               license_expiry: d.license_expiry ? new Date(d.license_expiry).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—',
+              iban: d.iban || '',
               types: typeNames,
               docs:[
                 {type:'license',    label:'Driving Licence',     url:d.license_url||''},

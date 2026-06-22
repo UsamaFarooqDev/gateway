@@ -488,4 +488,17 @@ HTML;
             'passenger_name' => $pMap[$r['user_id']] ?? null,
         ], $rows);
     }
+
+    public function getIbanMap(array $driverIds): array {
+        if (empty($driverIds)) return [];
+        $rows = $this->db->select('drivers', [
+            'select' => 'id,iban',
+            'id'     => 'in.(' . implode(',', $driverIds) . ')',
+        ]);
+        $map = [];
+        foreach ($rows as $r) {
+            $map[$r['id']] = $r['iban'] ?? '';
+        }
+        return $map;
+    }
 }
