@@ -8,11 +8,27 @@
   if (!sidebar || !toggleBtn) return;
 
   const COLLAPSED_KEY = 'pc_sidebar_collapsed';
+  const SCROLL_KEY    = 'pc_sidebar_scroll';
 
-  // Restore state
+  // Restore collapsed state (immediate — matches the head-injected class)
   if (localStorage.getItem(COLLAPSED_KEY) === '1') {
     sidebar.classList.add('collapsed');
     document.body.classList.add('sidebar-collapsed');
+    toggleBtn.querySelector('i').className = 'bi bi-layout-sidebar-inset-reverse';
+  }
+  // Remove the flash-prevention class now that real classes are applied
+  document.documentElement.classList.remove('sidebar-will-collapse');
+
+  // Restore sidebar scroll position
+  const sidebarNav = document.getElementById('sidebarNav');
+  if (sidebarNav) {
+    const savedScroll = sessionStorage.getItem(SCROLL_KEY);
+    if (savedScroll) sidebarNav.scrollTop = parseInt(savedScroll, 10);
+
+    // Save scroll position before navigating away
+    window.addEventListener('beforeunload', () => {
+      sessionStorage.setItem(SCROLL_KEY, String(sidebarNav.scrollTop));
+    });
   }
 
   toggleBtn.addEventListener('click', () => {

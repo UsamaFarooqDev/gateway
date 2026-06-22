@@ -97,7 +97,7 @@ $overlayJson = json_encode([
 ?>
 
 <!-- ─── Charts Row ─── -->
-<div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px">
+<div class="dash-charts-row">
 
   <!-- Weekly rides chart -->
   <div class="glass-card" style="padding:22px">
@@ -149,7 +149,7 @@ $overlayJson = json_encode([
 </div>
 
 <!-- ─── Ride Status + Quick Actions ─── -->
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+<div class="dash-two-col">
 
   <!-- Today's ride status -->
   <div class="glass-card" style="padding:22px">

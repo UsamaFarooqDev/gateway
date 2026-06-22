@@ -14,29 +14,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     if ($email && $password) {
-        $sb    = new SupabaseDB(true);   // service role bypasses RLS on admin_users
+        $sb    = new SupabaseDB(true);
         $rows  = $sb->select('admin_users', [
             'select'    => 'id,name,email,password_hash,role',
             'email'     => 'eq.' . $email,
             'is_active' => 'eq.true',
             'limit'     => 1,
         ]);
-        $admin = $rows[0] ?? null;
 
-        if ($admin && password_verify($password, $admin['password_hash'])) {
-            session_regenerate_id(true);
-            $_SESSION['admin_id']   = $admin['id'];
-            $_SESSION['admin_name'] = $admin['name'];
-            $_SESSION['admin_role'] = $admin['role'];
+        if ($rows === false || (is_array($rows) && empty($rows) && !$sb->lastRequestOk())) {
+            $error = 'Unable to connect to the database. Check server logs for details.';
+        } else {
+            $admin = $rows[0] ?? null;
 
-            // Update last_login (fire-and-forget)
-            $sb->update('admin_users', ['last_login' => date('c')], ['id' => 'eq.' . $admin['id']]);
+            if ($admin && password_verify($password, $admin['password_hash'])) {
+                session_regenerate_id(true);
+                $_SESSION['admin_id']   = $admin['id'];
+                $_SESSION['admin_name'] = $admin['name'];
+                $_SESSION['admin_role'] = $admin['role'];
 
-            header('Location: index.php');
-            exit;
+                $sb->update('admin_users', ['last_login' => date('c')], ['id' => 'eq.' . $admin['id']]);
+
+                header('Location: index.php');
+                exit;
+            }
+
+            $error = 'Invalid email or password.';
         }
-
-        $error = 'Invalid email or password.';
     } else {
         $error = 'Please enter your email and password.';
     }

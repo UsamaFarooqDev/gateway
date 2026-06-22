@@ -31,14 +31,13 @@ function navItem(string $page, string $icon, string $label, string $current, ?st
   <!-- Logo -->
   <a href="?page=dashboard" class="sidebar-logo">
     <img src="assets/img/logo.png" class="logo-icon" alt="PowerCabs">
-    <div class="logo-text">
-      
+    <!-- <div class="logo-text">
       <span class="tagline">Admin Panel</span>
-    </div>
+    </div> -->
   </a>
 
   <!-- Navigation -->
-  <nav class="sidebar-nav">
+  <nav class="sidebar-nav" id="sidebarNav">
 
     <?= navItem('dashboard', 'bi-speedometer2', 'Dashboard', $currentPage) ?>
 
@@ -65,7 +64,7 @@ function navItem(string $page, string $icon, string $label, string $current, ?st
 
     <div class="nav-section-label">System</div>
     <?= navItem('settings',  'bi-gear-fill',      'Settings &amp; Config', $currentPage) ?>
-    <?= navItem('admins',    'bi-shield-person',  'Admin Users',           $currentPage) ?>
+    <?= navItem('admins',    'bi-shield-lock',    'Admin Users',           $currentPage) ?>
     <?= navItem('integrations','bi-plug-fill',    'Integrations',          $currentPage) ?>
 
   </nav>
@@ -75,8 +74,8 @@ function navItem(string $page, string $icon, string $label, string $current, ?st
     <div class="sidebar-user" onclick="window.location='?page=admins'">
       <div class="user-avatar"><?= htmlspecialchars($adminInitials) ?></div>
       <div class="user-info">
-        <div class="user-name"><?= htmlspecialchars($adminName) ?></div>
         <div class="user-role"><?= htmlspecialchars($roleLabel) ?></div>
+        <div class="user-name">Admin Panel</div>
       </div>
     </div>
   </div>

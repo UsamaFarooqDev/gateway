@@ -145,8 +145,8 @@ class DashboardModel {
             'updated_at'     => $r['updated_at'] ?? null,
             'pickup_addr'    => $r['pickup_addr'],
             'dest_addr'      => $r['dest_addr'],
-            'driver_name'    => $driverMap[$r['driver_id']] ?? null,
-            'passenger_name' => $passengerMap[$r['user_id']] ?? null,
+            'driver_name'    => isset($r['driver_id']) ? ($driverMap[$r['driver_id']] ?? null) : null,
+            'passenger_name' => isset($r['user_id']) ? ($passengerMap[$r['user_id']] ?? null) : null,
         ], $rideRows);
 
         return compact('stats', 'driverCounts', 'weeklyRides', 'weeklyByStatus', 'rideCounts', 'recentRides', 'dashboardAlerts');
