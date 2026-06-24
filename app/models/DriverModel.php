@@ -489,15 +489,21 @@ HTML;
         ], $rows);
     }
 
-    public function getIbanMap(array $driverIds): array {
+    public function getDriverExtras(array $driverIds): array {
         if (empty($driverIds)) return [];
         $rows = $this->db->select('drivers', [
-            'select' => 'id,iban',
+            'select' => 'id,iban,meta',
             'id'     => 'in.(' . implode(',', $driverIds) . ')',
         ]);
         $map = [];
         foreach ($rows as $r) {
-            $map[$r['id']] = $r['iban'] ?? '';
+            $meta = $r['meta'] ?? null;
+            if (is_string($meta)) $meta = json_decode($meta, true);
+            if (!is_array($meta)) $meta = [];
+            $map[$r['id']] = [
+                'iban' => $r['iban'] ?? '',
+                'meta' => $meta,
+            ];
         }
         return $map;
     }

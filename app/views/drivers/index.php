@@ -90,7 +90,10 @@ foreach ($drivers as $d) {
         'earnings'       => '€' . number_format((float)($d['total_earnings'] ?? 0), 2),
         'joined'         => !empty($d['created_at'])      ? date('d M Y', strtotime($d['created_at']))      : '—',
         'license_expiry' => !empty($d['license_expiry'])  ? date('d M Y', strtotime($d['license_expiry']))  : '—',
-        'iban'           => $ibanMap[$id] ?? '',
+        'iban'           => $driverExtras[$id]['iban'] ?? '',
+        'available_nights'         => !empty($driverExtras[$id]['meta']['availableNights']),
+        'pets_allowed'             => !empty($driverExtras[$id]['meta']['petsAllowed']),
+        'person_with_disabilities' => !empty($driverExtras[$id]['meta']['personWithDisabilities']),
         'types'          => $currentTypeNames,
         'docs' => [
             ['type' => 'license',     'label' => 'Driving Licence',      'url' => $d['license_url']      ?? ''],
@@ -661,9 +664,23 @@ function viewDriver(id) {
     </div>
   `).join('');
 
+  const tags = [];
+  if (d.available_nights)         tags.push(['bi-moon-stars-fill', 'Available for Night Rides', '#6366f1']);
+  if (d.pets_allowed)             tags.push(['bi-heart-fill',      'Pets Allowed',             '#16a34a']);
+  if (d.person_with_disabilities) tags.push(['bi-person-wheelchair','Disability Accessible',   '#0891b2']);
+
+  const tagsHtml = tags.length ? `
+    <p class="section-title">Services</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">${tags.map(([icon, label, color]) =>
+      `<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;background:${color}12;border:1px solid ${color}30;font-size:12px;font-weight:600;color:${color}">
+        <i class="bi ${icon}"></i>${label}
+      </span>`
+    ).join('')}</div>` : '';
+
   document.getElementById('mdBody').innerHTML = `
     <p class="section-title" style="margin-top:0">Driver Information</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${grid}</div>
+    ${tagsHtml}
     <p class="section-title">Documents</p>
     <div class="doc-grid">${docGrid}</div>
   `;
@@ -933,6 +950,9 @@ async function submitAddDriver() {
               joined: d.created_at ? new Date(d.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—',
               license_expiry: d.license_expiry ? new Date(d.license_expiry).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—',
               iban: d.iban || '',
+              available_nights: !!(d.meta && d.meta.availableNights),
+              pets_allowed: !!(d.meta && d.meta.petsAllowed),
+              person_with_disabilities: !!(d.meta && d.meta.personWithDisabilities),
               types: typeNames,
               docs:[
                 {type:'license',    label:'Driving Licence',     url:d.license_url||''},
