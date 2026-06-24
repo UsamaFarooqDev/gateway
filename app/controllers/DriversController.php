@@ -15,9 +15,11 @@ class DriversController {
             $q      = trim($_GET['q']      ?? '');
             $status = preg_replace('/[^a-z_]/', '', $_GET['status'] ?? 'all');
             $rows    = $this->model->searchDrivers($q, $status);
-            $ibanMap = $this->model->getIbanMap(array_column($rows, 'id'));
+            $extras = $this->model->getDriverExtras(array_column($rows, 'id'));
             foreach ($rows as &$r) {
-                $r['iban'] = $ibanMap[$r['id']] ?? '';
+                $ex = $extras[$r['id']] ?? [];
+                $r['iban'] = $ex['iban'] ?? '';
+                $r['meta'] = $ex['meta'] ?? [];
             }
             unset($r);
             echo json_encode($rows);
@@ -45,8 +47,8 @@ class DriversController {
         $counts    = $pageData['counts'];
         $rideTypes = $this->model->getRideTypes();
 
-        $driverIds = array_column($drivers, 'id');
-        $ibanMap   = $this->model->getIbanMap($driverIds);
+        $driverIds    = array_column($drivers, 'id');
+        $driverExtras = $this->model->getDriverExtras($driverIds);
 
         $totalPages  = (int) ceil($total / $perPage);
         $currentPage = 'drivers';
