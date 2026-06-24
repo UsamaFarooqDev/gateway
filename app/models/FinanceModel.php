@@ -181,7 +181,7 @@ class FinanceModel {
             foreach ($passengers as $p) $map[$p['id']] = $p['name'];
         }
 
-        return array_map(fn($r) => [...$r, 'passenger_name' => $map[$r['user_id']] ?? null], $rows);
+        return array_map(fn($r) => [...$r, 'passenger_name' => isset($r['user_id']) ? ($map[$r['user_id']] ?? null) : null], $rows);
     }
 
     // ── Commission Settings (read-only — edit via Promotions & Pricing) ──
@@ -360,8 +360,8 @@ class FinanceModel {
         }
 
         return array_map(function ($r) use ($driverMap, $passengerMap) {
-            $driver    = $driverMap[$r['driver_id']] ?? null;
-            $passenger = $passengerMap[$r['user_id']] ?? null;
+            $driver    = isset($r['driver_id']) ? ($driverMap[$r['driver_id']] ?? null) : null;
+            $passenger = isset($r['user_id']) ? ($passengerMap[$r['user_id']] ?? null) : null;
             return [
                 ...$r,
                 'fare'            => $r['final_fare'] ?? $r['fare_eur'],
