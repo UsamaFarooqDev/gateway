@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../../mail_helper.php';
+
 class DriverModel {
     public function __construct(private SupabaseDB $db) {}
 
@@ -51,163 +53,68 @@ class DriverModel {
         $name   = $driver['full_name'] ?? 'Driver';
 
         $ok = $this->db->update('drivers', [
-            'deleted_at' => date('c'),
+            'status'     => 'suspended',
             'updated_at' => date('c'),
-            'status'     => 'inactive',
         ], ['id' => 'eq.' . $id]);
 
-        if (!$ok) return ['success' => false, 'message' => 'Failed to delete driver record.'];
-
-        $this->db->deleteAuthUser($id);
+        if (!$ok) return ['success' => false, 'message' => 'Failed to update driver status.'];
 
         $emailSent = false;
         if ($email) $emailSent = $this->sendDeletionEmail($email, $name);
 
         return [
             'success'    => true,
-            'message'    => 'Driver account deleted.' . ($emailSent ? ' Email notification sent.' : ' Email could not be sent — check server SMTP.'),
+            'message'    => 'Driver account suspended.' . ($emailSent ? ' Email notification sent.' : ' Email could not be sent — check server SMTP.'),
+            'email_sent' => $emailSent,
+        ];
+    }
+
+    public function approveDriver(string $id): array {
+        $rows = $this->db->select('drivers', [
+            'select'     => 'id,full_name,email',
+            'id'         => 'eq.' . $id,
+            'deleted_at' => 'is.null',
+            'limit'      => 1,
+        ]);
+        if (empty($rows)) return ['success' => false, 'message' => 'Driver not found.'];
+
+        $driver = $rows[0];
+        $email  = $driver['email'] ?? '';
+        $name   = $driver['full_name'] ?? 'Driver';
+
+        $ok = $this->db->update('drivers', [
+            'status'     => 'approved',
+            'updated_at' => date('c'),
+        ], ['id' => 'eq.' . $id]);
+
+        if (!$ok) return ['success' => false, 'message' => 'Failed to approve driver.'];
+
+        $emailSent = false;
+        if ($email) $emailSent = $this->sendApprovalEmail($email, $name);
+
+        return [
+            'success'    => true,
+            'message'    => 'Driver approved.' . ($emailSent ? ' Welcome email sent.' : ' Email could not be sent — check server SMTP.'),
             'email_sent' => $emailSent,
         ];
     }
 
     private function sendDeletionEmail(string $email, string $name): bool {
-        $subject  = 'Your PowerCabs Driver Account Has Been Removed';
-        $safeName = htmlspecialchars($name);
+        $result = sendDriverRemovedEmail($email, $name);
+        if ($result !== true) {
+            error_log("Driver removal email error [{$email}]: {$result}");
+            return false;
+        }
+        return true;
+    }
 
-        $html = <<<HTML
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background:#f4f4f4;font-family:'Poppins',Helvetica,Arial,sans-serif;color:#333">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:24px 0">
-<tr><td align="center">
-<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
-
-  <!-- Header -->
-  <tr>
-    <td style="background:#1A1A2E;padding:28px 24px;text-align:center">
-      <span style="font-size:28px;font-weight:800;color:#F37A20;letter-spacing:1px">PowerCabs</span>
-    </td>
-  </tr>
-
-  <!-- Warning icon + title -->
-  <tr>
-    <td style="padding:36px 40px 0;text-align:center">
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 16px"><tr><td style="width:56px;height:56px;border-radius:50%;border:2px solid #d0d0d0;text-align:center;vertical-align:middle;font-size:30px;font-weight:700;color:#aaaaaa">!</td></tr></table>
-      <h1 style="margin:0 0 4px;font-size:24px;font-weight:700;color:#1A1A2E">Account Removed</h1>
-      <p style="margin:0;font-size:15px;font-weight:600;color:#F37A20">Restrictions for 30 Days</p>
-    </td>
-  </tr>
-
-  <!-- Divider -->
-  <tr>
-    <td style="padding:20px 40px 0">
-      <hr style="border:none;border-top:1px solid #e8e8e8;margin:0">
-    </td>
-  </tr>
-
-  <!-- Body text -->
-  <tr>
-    <td style="padding:24px 40px 0;font-size:14px;line-height:1.7;color:#444">
-      <p style="margin:0 0 12px">Dear {$safeName},</p>
-      <p style="margin:0">Your account has been removed due to incomplete or invalid documentation following previous notifications. We welcome you to reapply after <strong style="color:#F37A20">30 days</strong> with all required documents ready for review.</p>
-    </td>
-  </tr>
-
-  <!-- Info card 1: Restrictions -->
-  <tr>
-    <td style="padding:24px 40px 0">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF8F2;border-radius:10px;padding:20px">
-        <tr>
-          <td width="54" valign="top" style="padding:0 14px 0 0">
-            <div style="width:44px;height:44px;background:#FFF0E0;border-radius:10px;text-align:center;line-height:0;padding-top:8px">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F37A20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><rect x="7" y="14" width="3" height="3" fill="#F37A20" stroke="none"/><rect x="14" y="14" width="3" height="3" fill="#F37A20" stroke="none"/></svg>
-            </div>
-          </td>
-          <td valign="top" style="font-size:13px;line-height:1.6;color:#555">
-            <strong style="font-size:14px;color:#1A1A2E">Restrictions for 30 Days</strong><br>
-            Please note that any application submitted within 30 days of account removal may be placed on hold and will be reviewed when 30 days have passed.
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-
-  <!-- Info card 2: Additional Verification -->
-  <tr>
-    <td style="padding:12px 40px 0">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF8F2;border-radius:10px;padding:20px">
-        <tr>
-          <td width="54" valign="top" style="padding:0 14px 0 0">
-            <div style="width:44px;height:44px;background:#FFF0E0;border-radius:10px;text-align:center;line-height:0;padding-top:8px">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F37A20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="10" r="3" fill="#F37A20" stroke="none"/><path d="M12 13c-2.5 0-4.5 1.5-4.5 3.5h9c0-2-2-3.5-4.5-3.5z" fill="#F37A20" stroke="none"/></svg>
-            </div>
-          </td>
-          <td valign="top" style="font-size:13px;line-height:1.6;color:#555">
-            <strong style="font-size:14px;color:#1A1A2E">Additional Verification</strong><br>
-            Future applications may also be subject to additional verification checks.
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-
-  <!-- Info card 3: Repeated Incomplete Applications -->
-  <tr>
-    <td style="padding:12px 40px 0">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF8F2;border-radius:10px;padding:20px">
-        <tr>
-          <td width="54" valign="top" style="padding:0 14px 0 0">
-            <div style="width:44px;height:44px;background:#FFF0E0;border-radius:10px;text-align:center;line-height:0;padding-top:8px">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F37A20" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="12" x2="15" y2="18"/><line x1="15" y1="12" x2="9" y2="18"/></svg>
-            </div>
-          </td>
-          <td valign="top" style="font-size:13px;line-height:1.6;color:#555">
-            <strong style="font-size:14px;color:#1A1A2E">Repeated Incomplete Applications</strong><br>
-            Repeated applications submitted without the required documentation or a complete profile may be considered misuse of the onboarding process and may result in a restriction on submitting further applications for up to <strong style="color:#F37A20">6 months</strong>.
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-
-  <!-- Disclaimer box -->
-  <tr>
-    <td style="padding:20px 40px 0">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F5;border-radius:10px;padding:16px 20px">
-        <tr>
-          <td width="32" valign="top" style="padding:0 10px 0 0">
-            <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="width:28px;height:28px;border-radius:50%;border:2px solid #ccc;text-align:center;vertical-align:middle;font-size:14px;color:#999">&#10003;</td></tr></table>
-          </td>
-          <td style="font-size:12px;line-height:1.6;color:#777">
-            PowerCabs reserves the right to accept or reject any future application based on the completeness and accuracy of the information provided.
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-
-  <!-- Footer -->
-  <tr>
-    <td style="padding:28px 40px 36px;text-align:center;font-size:14px;color:#444">
-      <p style="margin:0 0 2px"><strong>Thank you,</strong></p>
-      <p style="margin:0;color:#F37A20;font-weight:600">PowerCabs Team</p>
-    </td>
-  </tr>
-
-</table>
-</td></tr>
-</table>
-</body>
-</html>
-HTML;
-
-        $headers  = "From: PowerCabs <noreply@powercabs.ie>\r\n";
-        $headers .= "Reply-To: support@powercabs.ie\r\n";
-        $headers .= "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-
-        return @mail($email, $subject, $html, $headers);
+    private function sendApprovalEmail(string $email, string $name): bool {
+        $result = sendDriverApprovedEmail($email, $name);
+        if ($result !== true) {
+            error_log("Driver approval email error [{$email}]: {$result}");
+            return false;
+        }
+        return true;
     }
 
     public function searchDrivers(string $query, string $status, int $limit = 20): array {

@@ -99,6 +99,12 @@ class DriversController {
             exit;
         }
 
+        if ($action === 'approve_driver' && !empty($_POST['id'])) {
+            $result = $this->model->approveDriver($_POST['id']);
+            echo json_encode($result);
+            exit;
+        }
+
         if ($action === 'upload_doc' && !empty($_POST['id']) && !empty($_POST['doc_type'])) {
             $driverId = $_POST['id'];
             $docType  = $_POST['doc_type'];

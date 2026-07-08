@@ -8,7 +8,7 @@ function driverStatusBadge(string $status, bool $online = false): string {
     }
     $map = [
         'active'    => ['badge-active',    'Active'],
-        'approved'  => ['badge-active',    'Active'],   // treat same as active
+        'approved'  => ['badge-active',    'Approved'],
         'pending'   => ['badge-pending',   'Pending'],
         'suspended' => ['badge-suspended', 'Suspended'],
         'inactive'  => ['badge-inactive',  'Inactive'],
@@ -340,17 +340,17 @@ $expiryAlerts = array_filter($drivers, function($d) use ($alertWindow) {
 
               <?php if (($d['status'] ?? '') === 'pending'): ?>
               <button class="btn-icon success" title="Approve"
-                onclick="updateStatus(<?= htmlspecialchars(json_encode($id)) ?>, 'active', this)">
+                onclick="confirmApproveDriver(<?= htmlspecialchars(json_encode($id)) ?>, <?= htmlspecialchars(json_encode($name ?: 'this driver')) ?>)">
                 <i class="bi bi-check-lg"></i>
               </button>
               <?php elseif (in_array($d['status'] ?? '', ['active','approved'], true)): ?>
               <button class="btn-icon danger" title="Suspend"
-                onclick="updateStatus(<?= htmlspecialchars(json_encode($id)) ?>, 'suspended', this)">
+                onclick="confirmSuspendDriver(<?= htmlspecialchars(json_encode($id)) ?>, <?= htmlspecialchars(json_encode($name ?: 'this driver')) ?>)">
                 <i class="bi bi-slash-circle"></i>
               </button>
               <?php elseif (($d['status'] ?? '') === 'suspended'): ?>
               <button class="btn-icon success" title="Reactivate"
-                onclick="updateStatus(<?= htmlspecialchars(json_encode($id)) ?>, 'active', this)">
+                onclick="confirmReactivateDriver(<?= htmlspecialchars(json_encode($id)) ?>, <?= htmlspecialchars(json_encode($name ?: 'this driver')) ?>)">
                 <i class="bi bi-arrow-counterclockwise"></i>
               </button>
               <?php endif; ?>
@@ -527,18 +527,18 @@ $expiryAlerts = array_filter($drivers, function($d) use ($alertWindow) {
       <div style="width:40px;height:40px;border-radius:50%;background:#FEE2E2;display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <i class="bi bi-trash3-fill" style="color:#dc2626;font-size:18px"></i>
       </div>
-      <div>
-        <div class="modal-title">Delete Driver Account</div>
+      <div class="flex-1" style="min-width:0">
+        <div class="modal-title">Remove Driver Account</div>
         <div style="font-size:12px;color:var(--text-muted)" id="delDriverName"></div>
       </div>
       <button class="modal-close" onclick="Modal.close('deleteDriverModal')"><i class="bi bi-x"></i></button>
     </div>
     <div class="modal-body">
       <div style="background:#FEF2F2;border:1px solid #fecaca;border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:16px">
-        <div style="font-size:13px;font-weight:600;color:#dc2626;margin-bottom:6px">This action cannot be undone</div>
+        <div style="font-size:13px;font-weight:600;color:#dc2626;margin-bottom:6px">Driver account will be suspended</div>
         <ul style="margin:0;padding-left:18px;font-size:12.5px;color:#7f1d1d;line-height:1.8">
-          <li>Driver account will be permanently removed</li>
-          <li>Driver will be signed out of all devices</li>
+          <li>Status changes to Suspended — the record is kept, not deleted</li>
+          <li>Driver will no longer appear as active or be able to accept rides</li>
           <li>An email will be sent notifying document incompletion</li>
         </ul>
       </div>
@@ -552,7 +552,72 @@ $expiryAlerts = array_filter($drivers, function($d) use ($alertWindow) {
     <div class="modal-footer">
       <button class="btn-glass" onclick="Modal.close('deleteDriverModal')"><i class="bi bi-x"></i> Cancel</button>
       <button class="btn-primary-glass" id="delDriverBtn" style="background:linear-gradient(135deg,#dc2626,#b91c1c);box-shadow:0 4px 15px rgba(220,38,38,0.3)" onclick="executeDeleteDriver()">
-        <i class="bi bi-trash3"></i> Delete & Notify
+        <i class="bi bi-trash3"></i> Remove & Notify
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Approve Driver Confirmation Modal -->
+<div class="modal-overlay" id="approveDriverModal">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-header">
+      <div style="width:40px;height:40px;border-radius:50%;background:#DCFCE7;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="bi bi-check-circle-fill" style="color:#16a34a;font-size:18px"></i>
+      </div>
+      <div class="flex-1" style="min-width:0">
+        <div class="modal-title">Approve Driver Account</div>
+        <div style="font-size:12px;color:var(--text-muted)" id="apvDriverName"></div>
+      </div>
+      <button class="modal-close" onclick="Modal.close('approveDriverModal')"><i class="bi bi-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#F0FDF4;border:1px solid #bbf7d0;border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:600;color:#16a34a;margin-bottom:6px">Driver will go live</div>
+        <ul style="margin:0;padding-left:18px;font-size:12.5px;color:#166534;line-height:1.8">
+          <li>Status changes from Pending to Approved</li>
+          <li>Driver can go online and start accepting ride requests</li>
+          <li>A welcome email confirming approval will be sent</li>
+        </ul>
+      </div>
+      <div style="background:var(--hover-bg);border-radius:var(--radius-sm);padding:12px 14px">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Email notification preview</div>
+        <div style="font-size:12.5px;color:var(--text-primary);font-style:italic">
+          "Great news — your PowerCabs driver account has been approved. You're ready to hit the road."
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-glass" onclick="Modal.close('approveDriverModal')"><i class="bi bi-x"></i> Cancel</button>
+      <button class="btn-primary-glass" id="apvDriverBtn" onclick="executeApproveDriver()">
+        <i class="bi bi-check-lg"></i> Approve & Notify
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Suspend / Reactivate Driver Confirmation Modal -->
+<div class="modal-overlay" id="statusChangeModal">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-header">
+      <div id="scIconWrap" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i id="scIcon" class="bi"></i>
+      </div>
+      <div class="flex-1" style="min-width:0">
+        <div class="modal-title" id="scTitle"></div>
+        <div style="font-size:12px;color:var(--text-muted)" id="scDriverName"></div>
+      </div>
+      <button class="modal-close" onclick="Modal.close('statusChangeModal')"><i class="bi bi-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="scMessageBox" style="border-radius:var(--radius-sm);padding:14px 16px">
+        <div id="scMessage" style="font-size:13px;line-height:1.6"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-glass" onclick="Modal.close('statusChangeModal')"><i class="bi bi-x"></i> Cancel</button>
+      <button class="btn-primary-glass" id="scConfirmBtn" onclick="executeStatusChange()">
+        <i class="bi bi-check-lg"></i> <span id="scConfirmLabel">Confirm</span>
       </button>
     </div>
   </div>
@@ -623,12 +688,13 @@ function viewDriver(id) {
   document.getElementById('mdName').textContent   = d.name || '—';
   document.getElementById('mdId').textContent     = id.slice(0, 8) + '…';
 
+  const statusLabels = { active:'Active', approved:'Approved', pending:'Pending', suspended:'Suspended', inactive:'Inactive' };
   const statusStyle = {
-    active:'color:#16a34a;background:#DCFCE7', pending:'color:#d97706;background:#FEF3C7',
+    active:'color:#16a34a;background:#DCFCE7', approved:'color:#16a34a;background:#DCFCE7', pending:'color:#d97706;background:#FEF3C7',
     suspended:'color:#dc2626;background:#FEE2E2', inactive:'color:#94a3b8;background:#F1F5F9'
   }[d.status] || 'color:#94a3b8;background:#F1F5F9';
   document.getElementById('mdStatus').innerHTML =
-    `<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;${statusStyle}">${d.status || '—'}</span>`;
+    `<span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;${statusStyle}">${statusLabels[d.status] || d.status || '—'}</span>`;
 
   // Info grid
   const fields = [
@@ -688,11 +754,11 @@ function viewDriver(id) {
   // Footer action — treat 'approved' same as 'active'
   let action = '';
   if (d.status === 'pending') {
-    action = `<button class="btn-primary-glass" onclick="updateStatusFromModal('${escJs(id)}','active')"><i class="bi bi-check-lg"></i> Approve Driver</button>`;
+    action = `<button class="btn-primary-glass" onclick="Modal.close('viewDriverModal');confirmApproveDriver('${escJs(id)}','${escJs(d.name)}')"><i class="bi bi-check-lg"></i> Approve Driver</button>`;
   } else if (d.status === 'active' || d.status === 'approved') {
-    action = `<button class="btn-glass" style="color:#dc2626;border-color:#dc2626" onclick="updateStatusFromModal('${escJs(id)}','suspended')"><i class="bi bi-slash-circle"></i> Suspend</button>`;
+    action = `<button class="btn-glass" style="color:#dc2626;border-color:#dc2626" onclick="Modal.close('viewDriverModal');confirmSuspendDriver('${escJs(id)}','${escJs(d.name)}')"><i class="bi bi-slash-circle"></i> Suspend</button>`;
   } else if (d.status === 'suspended') {
-    action = `<button class="btn-primary-glass" onclick="updateStatusFromModal('${escJs(id)}','active')"><i class="bi bi-arrow-counterclockwise"></i> Reactivate</button>`;
+    action = `<button class="btn-primary-glass" onclick="Modal.close('viewDriverModal');confirmReactivateDriver('${escJs(id)}','${escJs(d.name)}')"><i class="bi bi-arrow-counterclockwise"></i> Reactivate</button>`;
   }
   document.getElementById('mdFooter').innerHTML =
     `<button class="btn-glass" onclick="Modal.close('viewDriverModal')"><i class="bi bi-x"></i> Close</button>${action}`;
@@ -713,11 +779,14 @@ function openLightbox(url, label, status, driverId) {
 
   let action = '';
   if (status === 'pending') {
-    action = `<button class="btn-primary-glass" onclick="updateStatusFromModal('${escJs(driverId)}','active');closeLightbox()"><i class="bi bi-check-lg"></i> Approve Driver</button>`;
+    const driverName = (_DD[driverId] || {}).name || 'this driver';
+    action = `<button class="btn-primary-glass" onclick="closeLightbox();confirmApproveDriver('${escJs(driverId)}','${escJs(driverName)}')"><i class="bi bi-check-lg"></i> Approve Driver</button>`;
   } else if (status === 'active' || status === 'approved') {
-    action = `<button class="btn-glass" style="color:#fff;background:#dc2626;border-color:#dc2626" onclick="updateStatusFromModal('${escJs(driverId)}','suspended');closeLightbox()"><i class="bi bi-slash-circle"></i> Suspend</button>`;
+    const driverName = (_DD[driverId] || {}).name || 'this driver';
+    action = `<button class="btn-glass" style="color:#fff;background:#dc2626;border-color:#dc2626" onclick="closeLightbox();confirmSuspendDriver('${escJs(driverId)}','${escJs(driverName)}')"><i class="bi bi-slash-circle"></i> Suspend</button>`;
   } else if (status === 'suspended') {
-    action = `<button class="btn-primary-glass" onclick="updateStatusFromModal('${escJs(driverId)}','active');closeLightbox()"><i class="bi bi-arrow-counterclockwise"></i> Reactivate</button>`;
+    const driverName = (_DD[driverId] || {}).name || 'this driver';
+    action = `<button class="btn-primary-glass" onclick="closeLightbox();confirmReactivateDriver('${escJs(driverId)}','${escJs(driverName)}')"><i class="bi bi-arrow-counterclockwise"></i> Reactivate</button>`;
   }
   document.getElementById('lbActions').innerHTML = action;
   document.getElementById('docLightbox').classList.add('open');
@@ -731,40 +800,6 @@ function closeLightbox() {
 document.getElementById('docLightbox').addEventListener('click', function(e) {
   if (e.target === this) closeLightbox();
 });
-
-async function updateStatusFromModal(id, status) {
-  const labels = { active:'approve/activate', suspended:'suspend', inactive:'deactivate' };
-  if (!confirm(`Are you sure you want to ${labels[status]||status} this driver?`)) return;
-  await _doUpdateStatus(id, status);
-}
-
-async function updateStatus(id, status, btn) {
-  const labels = { active:'activate', suspended:'suspend', inactive:'deactivate' };
-  if (!confirm(`Are you sure you want to ${labels[status]||status} this driver?`)) return;
-  if (btn) btn.disabled = true;
-  await _doUpdateStatus(id, status, btn);
-}
-
-async function _doUpdateStatus(id, status, btn) {
-  const fd = new FormData();
-  fd.append('action', 'update_status');
-  fd.append('id', id);
-  fd.append('status', status);
-  try {
-    const res  = await fetch(window.location.href, { method:'POST', body:fd });
-    const data = await res.json();
-    if (data.success) {
-      Toast.show('Driver status updated.', 'success');
-      setTimeout(() => location.reload(), 800);
-    } else {
-      Toast.show(data.message || 'Update failed.', 'error');
-      if (btn) btn.disabled = false;
-    }
-  } catch {
-    Toast.show('Network error.', 'error');
-    if (btn) btn.disabled = false;
-  }
-}
 
 function exportDrivers() {
   Toast.show('Export feature coming soon.', 'info');
@@ -857,7 +892,7 @@ async function submitAddDriver() {
     const statusBadge = (status === 'active' || status === 'approved') && isOnline
       ? `<span class='badge-pill badge-online'><span class='dot'></span>Online</span>`
       : { active:'<span class="badge-pill badge-active"><span class="dot"></span>Active</span>',
-          approved:'<span class="badge-pill badge-active"><span class="dot"></span>Active</span>',
+          approved:'<span class="badge-pill badge-active"><span class="dot"></span>Approved</span>',
           pending:'<span class="badge-pill badge-pending"><span class="dot"></span>Pending</span>',
           suspended:'<span class="badge-pill badge-suspended"><span class="dot"></span>Suspended</span>',
           inactive:'<span class="badge-pill badge-inactive"><span class="dot"></span>Inactive</span>',
@@ -890,11 +925,11 @@ async function submitAddDriver() {
       <button class="btn-icon" title="Upload Documents" onclick="openUploadDocsModal(${idJson})"><i class="bi bi-cloud-arrow-up"></i></button>
       <button class="btn-icon danger" title="Delete Account" onclick="confirmDeleteDriver(${idJson},${nameJson})"><i class="bi bi-trash3"></i></button>`;
     if (status === 'pending') {
-      actionBtns += `<button class="btn-icon success" title="Approve" onclick="updateStatus(${idJson},'active',this)"><i class="bi bi-check-lg"></i></button>`;
+      actionBtns += `<button class="btn-icon success" title="Approve" onclick="confirmApproveDriver(${idJson},${nameJson})"><i class="bi bi-check-lg"></i></button>`;
     } else if (status === 'active' || status === 'approved') {
-      actionBtns += `<button class="btn-icon danger" title="Suspend" onclick="updateStatus(${idJson},'suspended',this)"><i class="bi bi-slash-circle"></i></button>`;
+      actionBtns += `<button class="btn-icon danger" title="Suspend" onclick="confirmSuspendDriver(${idJson},${nameJson})"><i class="bi bi-slash-circle"></i></button>`;
     } else if (status === 'suspended') {
-      actionBtns += `<button class="btn-icon success" title="Reactivate" onclick="updateStatus(${idJson},'active',this)"><i class="bi bi-arrow-counterclockwise"></i></button>`;
+      actionBtns += `<button class="btn-icon success" title="Reactivate" onclick="confirmReactivateDriver(${idJson},${nameJson})"><i class="bi bi-arrow-counterclockwise"></i></button>`;
     }
 
     return `<tr>
@@ -1009,6 +1044,132 @@ async function executeDeleteDriver() {
       setTimeout(() => location.reload(), 900);
     } else {
       Toast.show(data.message || 'Delete failed.', 'error');
+    }
+  } catch {
+    Toast.show('Network error.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+}
+
+// ── Approve Driver ────────────────────────────────────────────────────
+let _apvDriverId = null;
+
+function confirmApproveDriver(id, name) {
+  _apvDriverId = id;
+  document.getElementById('apvDriverName').textContent = name;
+  Modal.open('approveDriverModal');
+}
+
+async function executeApproveDriver() {
+  if (!_apvDriverId) return;
+  const btn = document.getElementById('apvDriverBtn');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Approving…';
+
+  const fd = new FormData();
+  fd.append('action', 'approve_driver');
+  fd.append('id', _apvDriverId);
+
+  try {
+    const res  = await fetch(window.location.href, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.success) {
+      Toast.show(data.message, 'success');
+      Modal.close('approveDriverModal');
+      setTimeout(() => location.reload(), 900);
+    } else {
+      Toast.show(data.message || 'Approval failed.', 'error');
+    }
+  } catch {
+    Toast.show('Network error.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = orig;
+  }
+}
+
+// ── Suspend / Reactivate Driver ───────────────────────────────────────
+let _scDriverId     = null;
+let _scTargetStatus = null;
+
+function confirmSuspendDriver(id, name) {
+  _scDriverId     = id;
+  _scTargetStatus = 'suspended';
+
+  document.getElementById('scDriverName').textContent = name;
+  document.getElementById('scTitle').textContent = 'Suspend Driver';
+
+  const iconWrap = document.getElementById('scIconWrap');
+  iconWrap.style.background = '#FEE2E2';
+  const icon = document.getElementById('scIcon');
+  icon.className = 'bi bi-slash-circle-fill';
+  icon.style.color = '#dc2626';
+
+  const box = document.getElementById('scMessageBox');
+  box.style.background = '#FEF2F2';
+  box.style.border = '1px solid #fecaca';
+  document.getElementById('scMessage').innerHTML =
+    'This driver will be suspended immediately and will no longer be able to go online or accept rides.';
+
+  const btn = document.getElementById('scConfirmBtn');
+  btn.style.background = 'linear-gradient(135deg,#dc2626,#b91c1c)';
+  btn.style.boxShadow = '0 4px 15px rgba(220,38,38,0.3)';
+  document.getElementById('scConfirmLabel').textContent = 'Suspend Driver';
+
+  Modal.open('statusChangeModal');
+}
+
+function confirmReactivateDriver(id, name) {
+  _scDriverId     = id;
+  _scTargetStatus = 'approved';
+
+  document.getElementById('scDriverName').textContent = name;
+  document.getElementById('scTitle').textContent = 'Reactivate Driver';
+
+  const iconWrap = document.getElementById('scIconWrap');
+  iconWrap.style.background = '#DCFCE7';
+  const icon = document.getElementById('scIcon');
+  icon.className = 'bi bi-arrow-counterclockwise';
+  icon.style.color = '#16a34a';
+
+  const box = document.getElementById('scMessageBox');
+  box.style.background = '#F0FDF4';
+  box.style.border = '1px solid #bbf7d0';
+  document.getElementById('scMessage').innerHTML =
+    'This driver will be reactivated as Approved and can go online and accept rides again.';
+
+  const btn = document.getElementById('scConfirmBtn');
+  btn.style.background = '';
+  btn.style.boxShadow = '';
+  document.getElementById('scConfirmLabel').textContent = 'Reactivate Driver';
+
+  Modal.open('statusChangeModal');
+}
+
+async function executeStatusChange() {
+  if (!_scDriverId || !_scTargetStatus) return;
+  const btn = document.getElementById('scConfirmBtn');
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Updating…';
+
+  const fd = new FormData();
+  fd.append('action', 'update_status');
+  fd.append('id', _scDriverId);
+  fd.append('status', _scTargetStatus);
+
+  try {
+    const res  = await fetch(window.location.href, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.success) {
+      Toast.show('Driver status updated.', 'success');
+      Modal.close('statusChangeModal');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      Toast.show(data.message || 'Update failed.', 'error');
     }
   } catch {
     Toast.show('Network error.', 'error');
