@@ -366,6 +366,42 @@ body.sidebar-collapsed .top-header { left: 72px; }
 
 .header-admin .ha-name { font-size: 12.5px; font-weight: 500; color: var(--text-primary); }
 
+.account-dropdown {
+  flex-direction: column;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 200px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.14);
+  padding: 6px;
+  z-index: 9999;
+}
+
+.account-dropdown-item {
+  display: block;
+  padding: 7px 10px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: var(--t);
+}
+
+.account-dropdown-item:hover { background: var(--hover-bg); }
+
+.account-dropdown-item.danger { color: #dc2626; }
+.account-dropdown-item.danger:hover { background: #FEE2E2; }
+
+.account-dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 4px;
+}
+
 /* ─── Main Content ──────────────────────────────────────────── */
 .page-body {
   margin-left: var(--sidebar-w);

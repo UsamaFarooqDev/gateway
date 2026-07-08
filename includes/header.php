@@ -88,16 +88,20 @@ $adminInitials = strtoupper(substr($adminName, 0, 1) . (strpos($adminName, ' ') 
       </button>
 
       <!-- Admin user -->
-      <a href="?page=admins" class="header-admin">
-        <div class="ha-avatar"><?= htmlspecialchars($adminInitials) ?></div>
-        <span class="ha-name"><?= htmlspecialchars($adminName) ?></span>
-        <i class="bi bi-chevron-down" style="font-size:10px;color:var(--text-subtle)"></i>
-      </a>
-
-      <!-- Logout -->
-      <a href="logout.php" class="header-btn" title="Sign out">
-        <i class="bi bi-box-arrow-right"></i>
-      </a>
+      <div style="position:relative">
+        <button type="button" class="header-admin" id="accountMenuBtn">
+          <div class="ha-avatar"><?= htmlspecialchars($adminInitials) ?></div>
+          <span class="ha-name"><?= htmlspecialchars($adminName) ?></span>
+          <i class="bi bi-chevron-down" style="font-size:10px;color:var(--text-subtle)"></i>
+        </button>
+        <div id="accountDropdown" class="account-dropdown" style="display:none">
+          <a href="?page=admins" class="account-dropdown-item">Admin</a>
+          <a href="?page=settings" class="account-dropdown-item">Settings</a>
+          <a href="?page=integrations" class="account-dropdown-item">Integrations</a>
+          <div class="account-dropdown-divider"></div>
+          <a href="logout.php" class="account-dropdown-item danger">Sign Out</a>
+        </div>
+      </div>
     </div>
 
   </header>
@@ -138,6 +142,18 @@ $adminInitials = strtoupper(substr($adminName, 0, 1) . (strpos($adminName, ' ') 
   });
   document.addEventListener('click', () => { dd.style.display = 'none'; });
   dd.addEventListener('click', e => e.stopPropagation());
+
+  // ── Account dropdown ─────────────────────────────────────────────
+  const acctBtn = document.getElementById('accountMenuBtn');
+  const acctDd  = document.getElementById('accountDropdown');
+  if (acctBtn && acctDd) {
+    acctBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      acctDd.style.display = acctDd.style.display === 'flex' ? 'none' : 'flex';
+    });
+    document.addEventListener('click', () => { acctDd.style.display = 'none'; });
+    acctDd.addEventListener('click', e => e.stopPropagation());
+  }
 
   // ── Fetch alerts ──────────────────────────────────────────────────
   async function loadAlerts() {
