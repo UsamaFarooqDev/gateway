@@ -42,11 +42,19 @@ function buildInvoiceHtml(r, id) {
   const driverEarns = fare - commission;
   const invoiceNo   = 'PC-' + id.slice(0, 8).toUpperCase();
 
+  const passengerBusinessBlock = (r.passenger_business_name || r.passenger_tax_number)
+    ? `<div style="margin-top:6px;padding-top:6px;border-top:1px solid #E2E8F0">
+        ${r.passenger_business_name ? `<div style="font-size:12px;font-weight:600;color:#1a1a2e">${escHtml(r.passenger_business_name)}</div>` : ''}
+        ${r.passenger_tax_number    ? `<div style="font-size:11.5px;color:#64748B">Tax/VAT: ${escHtml(r.passenger_tax_number)}</div>` : ''}
+       </div>`
+    : '';
+
   return `
   <div id="invoicePrintArea" style="font-family:'Poppins',Arial,sans-serif;color:#1a1a2e;padding:32px;background:#fff">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #F37A20;padding-bottom:18px;margin-bottom:22px">
       <div>
         <img src="assets/img/logo.png" alt="PowerCabs" style="height:48px;object-fit:contain">
+        ${_pcCompanyBlock()}
       </div>
       <div style="text-align:right">
         <div style="font-size:16px;font-weight:700">RIDE INVOICE</div>
@@ -62,6 +70,7 @@ function buildInvoiceHtml(r, id) {
         <div style="font-size:13.5px;font-weight:600">${escHtml(r.passenger_name || '—')}</div>
         <div style="font-size:12px;color:#64748B;margin-top:4px">${escHtml(r.passenger_email || '—')}</div>
         <div style="font-size:12px;color:#64748B">${escHtml(r.passenger_phone || '—')}</div>
+        ${passengerBusinessBlock}
       </div>
       <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:14px 16px">
         <div style="font-size:11px;font-weight:700;color:#F37A20;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Service Provided By (Driver)</div>
@@ -143,43 +152,62 @@ function _pcFooterText() {
 function _eur(n) { return '€' + n.toFixed(2); }
 
 function _payoutTable(jobs, prepaid, cash, gross, commission, net, toll) {
+  // Prepaid/card/wallet: PowerCabs collected the fare → PC owes driver their share
+  // Cash: driver collected the fare → driver owes PC their commission
+  const commPct            = INVOICE_COMMISSION_PCT / 100;
+  const driverPct          = 100 - INVOICE_COMMISSION_PCT;
+  const prepaidDriverShare = prepaid * (1 - commPct); // gross PC owes driver
+  const cashCommOwed       = cash    * commPct;        // gross driver owes PC
+
+  const netValue    = prepaidDriverShare + toll - cashCommOwed;
+  const owedToDriver = Math.max(0, netValue);
+  const owedToPC     = Math.max(0, -netValue);
+
   return `
   <div style="font-weight:700;font-size:12px;text-decoration:underline;margin-bottom:8px">Total Payout Breakdown</div>
   <table style="border-collapse:collapse;font-size:12px;min-width:340px">
     <tr><td style="padding:3px 12px 3px 0">Total Number of Jobs</td><td style="padding:3px 0;text-align:right;font-weight:600">${jobs.toString().padStart(2,'0')}</td></tr>
-    <tr><td style="padding:3px 12px 3px 0">PrePaid Jobs Amount</td><td style="padding:3px 0;text-align:right">${_eur(prepaid)}</td></tr>
+    <tr><td style="padding:3px 12px 3px 0">PrePaid / Card / Wallet Jobs Amount</td><td style="padding:3px 0;text-align:right">${_eur(prepaid)}</td></tr>
     <tr><td style="padding:3px 12px 3px 0">Cash Collected by Driver</td><td style="padding:3px 0;text-align:right">${_eur(cash)}</td></tr>
     <tr style="font-weight:700;border-top:2px solid #1a1a2e;border-bottom:1px solid #1a1a2e">
       <td style="padding:5px 12px 5px 0">Total Gross Pay</td><td style="padding:5px 0;text-align:right">${_eur(gross)}</td>
     </tr>
-    <tr style="font-weight:700"><td style="padding:3px 12px 3px 0">PCLI Commission</td><td style="padding:3px 0;text-align:right">10%</td></tr>
+    <tr style="font-weight:700"><td style="padding:3px 12px 3px 0">PCLI Commission</td><td style="padding:3px 0;text-align:right">${INVOICE_COMMISSION_PCT}%</td></tr>
     <tr><td style="padding:3px 12px 3px 0">PCLI Revenue</td><td style="padding:3px 0;text-align:right">${_eur(commission)}</td></tr>
     <tr><td style="padding:3px 12px 3px 0">Driver's Net Earnings</td><td style="padding:3px 0;text-align:right">${_eur(net)}</td></tr>
     <tr><td style="padding:3px 12px 3px 0">Tolls</td><td style="padding:3px 0;text-align:right">${_eur(toll)}</td></tr>
     <tr><td style="padding:3px 12px 3px 0">Driver Peaktime Incentive</td><td style="padding:3px 0;text-align:right">€0.00</td></tr>
+    <tr style="border-top:1px solid #ddd">
+      <td style="padding:5px 12px 5px 0;color:#16a34a;font-weight:600">PowerCabs owes Driver (Prepaid ${driverPct}% share + Tolls)</td>
+      <td style="padding:5px 0;text-align:right;color:#16a34a;font-weight:600">${_eur(prepaidDriverShare + toll)}</td>
+    </tr>
+    <tr>
+      <td style="padding:5px 12px 5px 0;color:#dc2626;font-weight:600">Driver owes PowerCabs (Cash commission ${INVOICE_COMMISSION_PCT}%)</td>
+      <td style="padding:5px 0;text-align:right;color:#dc2626;font-weight:600">${_eur(cashCommOwed)}</td>
+    </tr>
     <tr style="font-weight:700;border-top:2px solid #1a1a2e;border-bottom:1px solid #1a1a2e">
-      <td style="padding:5px 12px 5px 0">Owed to Driver</td><td style="padding:5px 0;text-align:right">${_eur(net + toll)}</td>
+      <td style="padding:5px 12px 5px 0">Net Owed to Driver</td>
+      <td style="padding:5px 0;text-align:right">${owedToDriver > 0 ? `<strong style="color:#16a34a">${_eur(owedToDriver)}</strong>` : `<span style="color:#94a3b8">€0.00</span>`}</td>
     </tr>
     <tr style="font-weight:700">
-      <td style="padding:4px 12px 4px 0">Owed to PowerCabs</td>
-      <td style="padding:4px 0;text-align:right">€0.00 <span style="font-size:9.5px;font-weight:400">In case of Negative Balance</span></td>
+      <td style="padding:4px 12px 4px 0">Net Owed to PowerCabs</td>
+      <td style="padding:4px 0;text-align:right">${owedToPC > 0 ? `<strong style="color:#dc2626">${_eur(owedToPC)}</strong>` : `<span style="color:#94a3b8">€0.00</span>`}</td>
     </tr>
   </table>`;
 }
 
 function buildDriverInvoiceHtml(r, id) {
-  const fareEur    = parseFloat(r.fare_eur)      || 0;
-  const finalFare  = parseFloat(r.final_fare)    || fareEur;
-  const charged    = parseFloat(r.total_charged) || finalFare;
-  const toll       = parseFloat(r.toll)          || 0;
-  const commission = charged * INVOICE_COMMISSION_PCT / 100;
-  const net        = charged - commission;
+  const fareEur    = parseFloat(r.fare_eur)   || 0;
+  const finalFare  = parseFloat(r.final_fare) || fareEur;  // meter fare — basis for all pay
+  const toll       = parseFloat(r.toll)       || 0;
+  const commission = finalFare * INVOICE_COMMISSION_PCT / 100;
+  const net        = finalFare - commission;
   const invoiceNo  = 'PC-' + id.slice(0, 8).toUpperCase();
 
   const payMethod = r.payment_method || 'Cash';
   const isCard    = /card|wallet|stripe/i.test(payMethod);
-  const prepaid   = isCard ? charged : 0;
-  const cash      = isCard ? 0 : charged;
+  const prepaid   = isCard ? finalFare : 0;
+  const cash      = isCard ? 0 : finalFare;
 
   const vehicleType = _vehicleLabel(r.vehicle_type);
 
@@ -235,7 +263,7 @@ function buildDriverInvoiceHtml(r, id) {
       <tbody>${rideRow}</tbody>
     </table>
 
-    ${_payoutTable(1, prepaid, cash, charged, commission, net, toll)}
+    ${_payoutTable(1, prepaid, cash, finalFare, commission, net, toll)}
     ${_pcFooterText()}
   </div>`;
 }
@@ -248,14 +276,13 @@ function buildDriverStatementHtml(data) {
   let totalGross = 0, totalCommission = 0, totalPrepaid = 0, totalCash = 0, totalToll = 0;
   const rowsHtml = data.rows.map(r => {
     const fareEur   = parseFloat(r.fare_eur)   || 0;
-    const finalFare = parseFloat(r.final_fare) || fareEur;
-    const charged   = parseFloat(r.fare)       || finalFare;
+    const finalFare = parseFloat(r.final_fare) || fareEur;  // meter fare — basis for all pay
     const toll      = parseFloat(r.toll)       || 0;
     const isCard    = /card|wallet|stripe/i.test(r.payment_method || '');
-    totalGross      += charged;
-    totalCommission += r.commission;
-    totalPrepaid    += isCard ? charged : 0;
-    totalCash       += isCard ? 0 : charged;
+    totalGross      += finalFare;
+    totalCommission += finalFare * INVOICE_COMMISSION_PCT / 100;
+    totalPrepaid    += isCard ? finalFare : 0;
+    totalCash       += isCard ? 0 : finalFare;
     totalToll       += toll;
     return `
       <tr style="border-bottom:1px solid #E2E8F0">
@@ -434,6 +461,7 @@ function buildStatementHtml(data) {
     <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #F37A20;padding-bottom:18px;margin-bottom:22px">
       <div>
         <img src="assets/img/logo.png" alt="PowerCabs" style="height:48px;object-fit:contain">
+        ${_pcCompanyBlock()}
       </div>
       <div style="text-align:right">
         <div style="font-size:16px;font-weight:700">INVOICE STATEMENT</div>

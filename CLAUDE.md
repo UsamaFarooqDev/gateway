@@ -1,241 +1,133 @@
-# PowerCabs — Claude Code Project Memory
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-**PowerCabs** is an Irish ride-hailing platform with Flutter mobile apps (Passenger + Driver) and a Supabase backend. Currently building the **Admin Panel** to manage rides, drivers, passengers, corporate accounts, financials, analytics, and platform settings.
+**gateway** is the PHP admin panel for PowerCabs, an Irish ride-hailing platform. It manages drivers, passengers, rides, finance, analytics, and platform settings by calling the Supabase backend directly via REST API.
 
 ---
 
-## Tech Stack
+## Architecture
 
-| Layer | Technology |
-|---|---|
-| Mobile Apps | Flutter (Dart) — Passenger & Driver apps |
-| Backend | Supabase (PostgreSQL, Auth, Realtime, Storage, Edge Functions) |
-| Admin Panel | PHP backend + Bootstrap 5 frontend (glassy/glassmorphism UI) |
-| Real-time | WebRTC with TURN server |
-| Email | Supabase Auth emails (custom PCTheme templates) |
-| Maps | Google Maps API |
-| Notifications | Firebase Push Notifications |
+### Request Flow
 
----
+All requests enter through `index.php`, which:
+1. Guards with `$_SESSION['admin_id']` (set by `login.php`)
+2. Sanitises the `?page=` query param
+3. Instantiates the matching controller and calls `->index()`
+4. Falls back to a view-only path or a "coming soon" placeholder for unimplemented modules
 
-## Supabase
+There is no `.htaccess` URL rewriting — all navigation uses `?page=<slug>` query params.
 
-- **Project URL:** `https://ijrnahatonxpuzwjtykd.supabase.co`
-- **Anon key:** stored in Flutter `lib/core/constants/supabase_constants.dart`
-- Auth uses `verifyOtp({ token_hash, type })` — NOT the old `verify` method
-- Password reset uses `{{ .TokenHash }}` as query param (hash-stripping fix)
-- Deep link URI scheme: `io.supabase.powercabs://login-callback/`
-- Package used for deep links: `app_links`
+### Database Layer — `SupabaseDB` (`config/database.php`)
 
-### Key Tables
-- `public.drivers` — driver profiles, vehicle info, documents
-- `public.passengers` — passenger profiles
-- `public.rides` — ride records with status, route, fare
-- Vehicle type stored as **jsonb array**: `[economy]` or `[economy, economy_xl]`
-  - 4 seats → `[economy]`
-  - 5+ seats → `[economy, economy_xl]`
+This repo does **not** use MySQL or PDO. All data access goes through the `SupabaseDB` class, which calls the Supabase REST API via PHP cURL:
 
----
+- `select(table, params)` — GET with PostgREST filter params (e.g. `'status' => 'eq.approved'`)
+- `selectParallel(queries)` — fires multiple SELECTs concurrently via `curl_multi`
+- `update(table, data, filters)` — PATCH
+- `insert(table, data)` — POST returning representation
+- `delete(table, filters)` — DELETE
+- `rpc(fn, params)` / `rpcWithStatus(fn, params)` — Postgres RPC functions
+- `createAuthUser()` / `deleteAuthUser()` — Supabase Auth Admin API
+- `uploadFile()` — Supabase Storage API
 
-## Flutter App Structure
+`getDB()` returns a singleton `SupabaseDB(useServiceRole: true)`. The service role key is defined in `config/database.php` as a constant.
 
-### Apps
-- `pw_app_passenger` — Passenger app
-- `pw_app_driver` — Driver app
+PostgREST filter syntax: pass values as `'column' => 'operator.value'` (e.g. `'deleted_at' => 'is.null'`, `'status' => 'eq.approved'`). Multiple values for the same key use an array.
 
-### Conventions
-- State management: (confirm with codebase — likely Riverpod or Provider)
-- Use `async`/`await` throughout — no raw `.then()` chains
-- Always handle Supabase errors with try/catch and surface meaningful messages
-- Use `const` constructors wherever possible
-- Separate UI, logic, and data layers (feature-based folder structure preferred)
+### Caching — `Cache` (`config/cache.php`)
 
-### Android Build
-- Android SDK path: `C:\Android\sdk` (spaces in path break `flutter build appbundle`)
-- Signing: `upload-key.jks` + `key.properties`
-- Background location requires prominent disclosure dialog before requesting permission
-- `USE_FULL_SCREEN_INTENT` must be justified or removed for Play Store
+File-based cache stored in `sys_get_temp_dir()/pc_cache/`. Default TTL is 30 seconds. Use `Cache::get($key)`, `Cache::set($key, $value, $ttl)`, `Cache::forget($key)`. The Dashboard and Analytics controllers use this to avoid hammering Supabase on repeated page loads.
 
-### iOS Build
-- Distribution via Apple Developer account
-- `Info.plist` must include `NSPhotoLibraryUsageDescription` and all used permission strings
-- Deep link registered in `Info.plist` URL schemes
+### MVC Pattern
+
+- **Controllers** (`app/controllers/`) — thin; handle request dispatch (GET vs POST, AJAX vs full page), set `$currentPage`, `$pageTitle`, `$pageCrumbs`, then `require` the view
+- **Models** (`app/models/`) — all Supabase queries live here; return plain PHP arrays
+- **Views** (`app/views/<module>/index.php`) — render HTML; receive data as PHP variables from the controller
+
+AJAX actions are handled inline in the controller's `index()` method by checking `$_GET['action']` or `$_POST['action']` before rendering the page.
+
+### Includes
+
+- `includes/header.php` — DOCTYPE, Bootstrap/icons/theme CSS, opens `<div class="admin-shell">`, includes sidebar
+- `includes/sidebar.php` — glassmorphism sidebar with role-aware nav; reads `$currentPage` for active state
+- `includes/footer.php` — closing tags, Bootstrap JS, Chart.js, `assets/js/app.js`
+- `includes/invoice_modal.php` — reusable invoice modal markup included by Finance views
+
+### Config Files
+
+- `config/finance_adjustments.json` — persists manual finance adjustments (written/read by `FinanceController`)
+- `config/integrations.json` — persists integration settings
 
 ---
 
-## WebRTC / TURN
+## Module Status
 
-- **Server:** `free.expressturn.com:3478`
-- **Username:** `000000002091984498`
-- **Credential:** `kwzWwHwPxvcD7QYFl0clT78xCqo=`
+Controllers exist for: Dashboard, Drivers, Passengers, Rides, Fleet, Finance, Promotions, Notifications, Analytics, Integrations.
 
----
-
-## Admin Panel — Module List
-
-The admin panel covers **17 modules**:
-
-1. Dashboard
-2. Ride Management
-3. Dispatcher Console
-4. Driver Management
-5. Passenger Management
-6. Corporate Accounts
-7. Fleet Management
-8. Finance & Payments
-9. Promotions & Pricing
-10. Zones & Coverage
-11. Notifications & Alerts
-12. Analytics & Reports
-13. Support & Disputes
-14. Ratings & Reviews
-15. Settings & Configuration
-16. Admin User Management
-17. Integrations
+Stub views (no controller yet): dispatcher, corporate, zones, support, ratings, settings, admins.
 
 ---
 
-## Admin Panel — Tech Stack & Architecture
+## UI Design Rules — STRICTLY FOLLOW
 
-### Backend (PHP)
-- **Language:** PHP 8.x
-- **Pattern:** MVC — controllers in `app/controllers/`, models in `app/models/`, views in `app/views/`
-- **Database:** MySQL via PDO (prepared statements only — no raw string queries)
-- **Auth:** Session-based PHP auth with role-based access control (RBAC)
-- **API:** RESTful JSON endpoints for AJAX calls from frontend (`api/` folder)
-- **Config:** `config/database.php` for DB credentials — never hardcode credentials inline
-- **Routing:** Simple front-controller pattern via `index.php` + `.htaccess` rewrite rules
-
-### Frontend (Bootstrap 5 + Glassmorphism)
-- **Framework:** Bootstrap 5.3
-- **Theme:** Glassmorphism — frosted glass cards, blurred backgrounds, subtle transparency
-- **Icons:** Bootstrap Icons or Remix Icons
-- **Charts:** Chart.js for analytics/dashboards
-- **Maps:** Google Maps JS API (live driver map, zone editor)
-- **AJAX:** Vanilla JS `fetch()` for all dynamic data — no jQuery
-- **Fonts:** Poppins (Google Fonts)
-
-### UI Design Rules — STRICTLY FOLLOW
-- Background: deep dark `#0D0D1A` or `#1A1A2E` with subtle radial gradient
+- Background: `#1A1A2E` with subtle radial gradient
 - Glass cards: `background: rgba(255,255,255,0.05)`, `backdrop-filter: blur(12px)`, `border: 1px solid rgba(255,255,255,0.1)`, `border-radius: 16px`
-- Primary accent: `#F37A20` (orange) for buttons, active states, highlights, chart colors
-- Secondary accent: `rgba(243,122,32,0.15)` for soft orange glows and hover states
+- Primary accent: `#F37A20` (orange) — buttons, active states, highlights, chart colors
+- Buttons: `linear-gradient(135deg, #F37A20, #e06010)`, `box-shadow: 0 4px 15px rgba(243,122,32,0.3)`
 - Text: `#FFFFFF` primary, `rgba(255,255,255,0.6)` secondary/muted
-- Buttons: orange gradient `linear-gradient(135deg, #F37A20, #e06010)` with `box-shadow: 0 4px 15px rgba(243,122,32,0.3)`
-- Sidebar: glass panel, dark, with orange active indicator
-- Tables: glass background, subtle row hover with orange tint
-- Inputs: dark glass `background: rgba(255,255,255,0.07)`, orange focus border
-- Badges/pills: semi-transparent colored backgrounds
-- Minimal, clean — no clutter, generous whitespace, smooth transitions (`transition: all 0.3s ease`)
+- Inputs: `background: rgba(255,255,255,0.07)`, orange focus border
+- Transitions: `transition: all 0.3s ease`
+- Icons: Bootstrap Icons (`bi-*`)
+- Charts: Chart.js
+- AJAX: vanilla `fetch()` — no jQuery
 
-### Folder Structure
-```
-admin/
-├── index.php                  # Front controller
-├── .htaccess                  # URL rewriting
-├── config/
-│   └── database.php           # DB config
-├── app/
-│   ├── controllers/           # PHP controllers (one per module)
-│   ├── models/                # PHP models (DB queries)
-│   └── views/                 # PHP view templates
-├── api/                       # JSON API endpoints (AJAX)
-├── assets/
-│   ├── css/
-│   │   └── theme.css          # Custom glass theme styles
-│   ├── js/
-│   │   └── app.js             # Global JS utilities
-│   └── img/
-│       └── logo.svg           # PowerCabs logo
-├── includes/
-│   ├── header.php             # HTML head + nav
-│   ├── sidebar.php            # Sidebar nav (all 17 modules)
-│   └── footer.php             # Scripts + closing tags
-└── vendor/                    # Composer dependencies
-```
+All custom styles live in `assets/css/theme.css`. Global JS utilities in `assets/js/app.js`.
 
-### PHP Code Style
-- PHP 8 — use typed properties, match expressions, named arguments where appropriate
-- Always use PDO with prepared statements — never interpolate user input into SQL
-- Use `htmlspecialchars()` on all output to prevent XSS
-- Controllers are thin — logic lives in models
-- Return JSON from API endpoints: `header('Content-Type: application/json'); echo json_encode($data);`
-- Error responses: `['success' => false, 'message' => '...']`
-- Success responses: `['success' => true, 'data' => [...]]`
+---
 
-### Admin Roles
+## PHP Code Conventions
+
+- PHP 8 — typed properties, constructor promotion, match expressions
+- All output: `htmlspecialchars()` to prevent XSS
+- AJAX responses: `header('Content-Type: application/json'); echo json_encode($data); exit;`
+- Success: `['success' => true, 'data' => [...]]`; Error: `['success' => false, 'message' => '...']`
+- Timezone: `Europe/Dublin` (set globally in `index.php`)
+- Soft-delete pattern: set `deleted_at` + `status = 'inactive'`; always filter `'deleted_at' => 'is.null'` in queries
+
+---
+
+## Key Supabase Tables
+
+- `drivers` — profiles, vehicle info, docs; soft-deleted via `deleted_at`
+- `driver_extras` — IBAN and additional driver metadata
+- `passengers` — soft-deleted via `deleted_at`
+- `rides` — status enum includes `completed`, `cancelled`, etc.; `fare_eur`/`final_fare` columns
+- `admin_users` — `id, name, email, password_hash, role, is_active, last_login`
+- `pricing_config` — `driver_commission_pct`, `is_active`
+- Vehicle type stored as jsonb array: 4 seats → `[economy]`, 5+ → `[economy, economy_xl]`
+
+---
+
+## Admin Roles
+
 - `super_admin` — full access
 - `dispatcher` — Dispatcher Console + Ride Management
 - `finance` — Finance & Payments + Reports
 - `support` — Support & Disputes + Ratings
 - `fleet_manager` — Fleet + Driver Management
 
----
-
-## Branding / Design
-
-- **Primary color:** `#F37A20` (orange)
-- **Dark background:** `#1A1A2E`
-- **Font:** Poppins
-- **Brand name:** PowerCabs
-- **Domain:** powercabs.ie
-- Email templates follow **PCTheme** — dark mode, orange accents, Poppins, SVG logo
+Role is stored in `$_SESSION['admin_role']` after login.
 
 ---
 
-## Code Style
+## Running Locally
 
-- **Dart/Flutter:** follow official Dart style guide; use `lints` or `flutter_lints`
-- **SQL / Supabase:** use Row Level Security (RLS) on all tables; never expose service role key client-side
-- **Naming:** `snake_case` for DB columns/tables, `camelCase` for Dart variables, `PascalCase` for classes
-- **Comments:** write comments for non-obvious logic; avoid redundant comments
-- Prefer named parameters for functions with 3+ arguments
+Serve from `C:\MAMP\bin\php\php8.3.1` via MAMP. The panel is PHP-only — no build step, no Composer dependencies. Browse to the configured MAMP vhost root pointing at this directory.
 
----
-
-## Common Commands
-
-```bash
-# Flutter
-flutter pub get
-flutter build appbundle --release
-flutter build ipa --release
-flutter run --flavor production
-
-# Supabase CLI
-supabase start
-supabase db push
-supabase functions deploy <function-name>
-supabase gen types typescript --linked > lib/database.types.ts
+To run a quick PHP syntax check:
+```powershell
+php -l app/controllers/DriversController.php
 ```
-
----
-
-## Known Issues / Gotchas
-
-- Android SDK must be at `C:\Android\sdk` — spaces in path break native builds
-- `keytool` requires full JDK path on Windows PowerShell: `C:\Android\sdk\build-tools\<version>\...`
-- Supabase free plan has egress limits — always paginate queries and select only needed columns
-- iOS error 90683 = missing `NSPhotoLibraryUsageDescription` in `Info.plist`
-- Google Play rejects `ACCESS_BACKGROUND_LOCATION` without a prominent in-app disclosure dialog shown *before* the system permission prompt
-
----
-
-## Environment
-
-- **Developer OS:** Windows
-- **IDE:** VS Code with Claude Code extension
-- **Version Control:** Git
-- **Target platforms:** Android (Play Store) + iOS (App Store)
-- **Region:** Ireland (Irish ride-hailing market)
-
----
-
-## Out of Scope
-
-- Do not add analytics/tracking SDKs without asking
-- Do not change Supabase project URL or auth config without confirmation
-- Do not modify signing keys or certificate files
-- Do not switch admin panel to a JS framework (React/Vue/etc.) unless explicitly asked — keep it PHP + Bootstrap

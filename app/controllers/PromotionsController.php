@@ -15,12 +15,13 @@ class PromotionsController {
             return;
         }
 
-        $tab  = preg_replace('/[^a-z]/', '', $_GET['tab'] ?? 'pricing');
-        if (!in_array($tab, ['pricing','promotions'])) $tab = 'pricing';
+        $tab  = preg_replace('/[^a-z_]/', '', $_GET['tab'] ?? 'pricing');
+        if (!in_array($tab, ['pricing', 'promotions', 'promo_codes'])) $tab = 'pricing';
 
         $stats      = $this->model->getStats();
         $pricing    = [];
         $promotions = [];
+        $promoCodes = [];
         $rideTypes  = [];
 
         if ($tab === 'pricing') {
@@ -29,8 +30,14 @@ class PromotionsController {
                 'select' => 'id,name',
                 'order'  => 'sort_order.asc,name.asc',
             ]);
-        } else {
+        } elseif ($tab === 'promotions') {
             $promotions = $this->model->getPromotions();
+        } else {
+            $promoCodes = $this->model->getPromoCodes();
+            $rideTypes  = $this->db->select('ride_types', [
+                'select' => 'id,name',
+                'order'  => 'sort_order.asc,name.asc',
+            ]);
         }
 
         $currentPage = 'promotions';
@@ -50,12 +57,17 @@ class PromotionsController {
             'delete_pricing' => $this->deletePricing(),
             'toggle_pricing' => $this->togglePricing(),
             'get_pricing'    => $this->getPricing(),
-            'create_promo'   => $this->createPromo(),
-            'update_promo'   => $this->updatePromo(),
-            'delete_promo'   => $this->deletePromo(),
-            'toggle_promo'   => $this->togglePromo(),
-            'get_promo'      => $this->getPromo(),
-            default          => $this->json(['success' => false, 'message' => 'Unknown action.']),
+            'create_promo'      => $this->createPromo(),
+            'update_promo'      => $this->updatePromo(),
+            'delete_promo'      => $this->deletePromo(),
+            'toggle_promo'      => $this->togglePromo(),
+            'get_promo'         => $this->getPromo(),
+            'create_promo_code' => $this->createPromoCode(),
+            'update_promo_code' => $this->updatePromoCode(),
+            'delete_promo_code' => $this->deletePromoCode(),
+            'toggle_promo_code' => $this->togglePromoCode(),
+            'get_promo_code'    => $this->getPromoCode(),
+            default             => $this->json(['success' => false, 'message' => 'Unknown action.']),
         };
     }
 
@@ -132,6 +144,45 @@ class PromotionsController {
     private function getPromo(): void {
         $id  = $_POST['id'] ?? '';
         $row = $this->model->getPromotionById($id);
+        $this->json($row
+            ? ['success' => true,  'data' => $row]
+            : ['success' => false, 'message' => 'Not found.']);
+    }
+
+    // ── Promo Codes ──────────────────────────────────────────────────
+
+    private function createPromoCode(): void {
+        $r = $this->model->createPromoCode($_POST);
+        $this->json($r
+            ? ['success' => true,  'message' => 'Promo code created.', 'data' => $r]
+            : ['success' => false, 'message' => 'Failed to create promo code. Code may already exist.']);
+    }
+
+    private function updatePromoCode(): void {
+        $id = $_POST['id'] ?? '';
+        if (!$id) { $this->json(['success' => false, 'message' => 'Missing ID.']); return; }
+        $ok = $this->model->updatePromoCode($id, $_POST);
+        $this->json(['success' => $ok, 'message' => $ok ? 'Promo code updated.' : 'Update failed.']);
+    }
+
+    private function deletePromoCode(): void {
+        $id = $_POST['id'] ?? '';
+        if (!$id) { $this->json(['success' => false, 'message' => 'Missing ID.']); return; }
+        $ok = $this->model->deletePromoCode($id);
+        $this->json(['success' => $ok, 'message' => $ok ? 'Promo code deleted.' : 'Delete failed.']);
+    }
+
+    private function togglePromoCode(): void {
+        $id     = $_POST['id'] ?? '';
+        $active = filter_var($_POST['active'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        if (!$id) { $this->json(['success' => false, 'message' => 'Missing ID.']); return; }
+        $ok = $this->model->togglePromoCode($id, $active);
+        $this->json(['success' => $ok, 'message' => $ok ? 'Status updated.' : 'Update failed.']);
+    }
+
+    private function getPromoCode(): void {
+        $id  = $_POST['id'] ?? '';
+        $row = $this->model->getPromoCodeById($id);
         $this->json($row
             ? ['success' => true,  'data' => $row]
             : ['success' => false, 'message' => 'Not found.']);

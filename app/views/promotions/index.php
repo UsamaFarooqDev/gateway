@@ -37,6 +37,10 @@ $eur = fn($v)  => '€' . number_format((float)($v ?? 0), 2);
   <button class="btn-primary-glass" onclick="Modal.open('pricingModal');resetPricingForm()">
     <i class="bi bi-plus-lg"></i> Add Config
   </button>
+  <?php elseif ($tab === 'promo_codes'): ?>
+  <button class="btn-primary-glass" onclick="openPromoCodeModal()">
+    <i class="bi bi-plus-lg"></i> Add Promo Code
+  </button>
   <?php else: ?>
   <button class="btn-primary-glass" onclick="openPromoModal()">
     <i class="bi bi-plus-lg"></i> Add Promotion
@@ -45,16 +49,31 @@ $eur = fn($v)  => '€' . number_format((float)($v ?? 0), 2);
 </div>
 
 <!-- Stats strip -->
+<?php
+$statsByTab = [
+  'pricing'     => [
+    ['value' => $stats['total_pricing'],      'label' => 'Pricing Rules',  'icon' => 'bi-currency-euro',    'color' => 'var(--text-primary)'],
+    ['value' => $stats['active_pricing'],     'label' => 'Active Rules',   'icon' => 'bi-check-circle-fill','color' => 'var(--accent)'],
+    ['value' => $stats['total_promos'],       'label' => 'Promotions',     'icon' => 'bi-megaphone-fill',   'color' => 'var(--text-primary)'],
+    ['value' => $stats['active_promos'],      'label' => 'Live Now',       'icon' => 'bi-broadcast',        'color' => 'var(--accent)'],
+  ],
+  'promotions'  => [
+    ['value' => $stats['total_promos'],       'label' => 'Total Promotions','icon' => 'bi-megaphone-fill',  'color' => 'var(--text-primary)'],
+    ['value' => $stats['active_promos'],      'label' => 'Live Now',        'icon' => 'bi-broadcast',       'color' => 'var(--accent)'],
+    ['value' => $stats['total_pricing'],      'label' => 'Pricing Rules',   'icon' => 'bi-currency-euro',   'color' => 'var(--text-primary)'],
+    ['value' => $stats['active_pricing'],     'label' => 'Active Rules',    'icon' => 'bi-check-circle-fill','color' => 'var(--accent)'],
+  ],
+  'promo_codes' => [
+    ['value' => $stats['total_promo_codes'],  'label' => 'Total Codes',    'icon' => 'bi-ticket-perforated-fill','color' => 'var(--text-primary)'],
+    ['value' => $stats['active_promo_codes'], 'label' => 'Active Codes',   'icon' => 'bi-check-circle-fill',    'color' => 'var(--accent)'],
+    ['value' => $stats['promo_codes_uses'],   'label' => 'Total Uses',     'icon' => 'bi-bar-chart-fill',       'color' => 'var(--text-primary)'],
+    ['value' => $stats['total_promos'],       'label' => 'Promotions',     'icon' => 'bi-megaphone-fill',       'color' => 'var(--text-muted)'],
+  ],
+];
+$sItems = $statsByTab[$tab] ?? $statsByTab['pricing'];
+?>
 <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:22px">
-  <?php
-  $sItems = [
-    ['value' => $stats['total_pricing'],  'label' => 'Pricing Rules',  'icon' => 'bi-currency-euro',    'color' => 'var(--text-primary)'],
-    ['value' => $stats['active_pricing'], 'label' => 'Active Rules',   'icon' => 'bi-check-circle-fill','color' => 'var(--accent)'],
-    ['value' => $stats['total_promos'],   'label' => 'Promotions',     'icon' => 'bi-megaphone-fill',   'color' => 'var(--text-primary)'],
-    ['value' => $stats['active_promos'],  'label' => 'Live Now',       'icon' => 'bi-broadcast',        'color' => 'var(--accent)'],
-  ];
-  foreach ($sItems as $s):
-  ?>
+  <?php foreach ($sItems as $s): ?>
   <div class="glass-card stat-card" style="display:flex;align-items:center;gap:14px;padding:16px 20px">
     <div class="stat-icon" style="margin:0;flex-shrink:0"><i class="bi <?= $s['icon'] ?>"></i></div>
     <div>
@@ -67,7 +86,11 @@ $eur = fn($v)  => '€' . number_format((float)($v ?? 0), 2);
 
 <!-- Tab nav -->
 <div style="display:flex;gap:4px;margin-bottom:20px">
-  <?php foreach (['pricing' => ['bi-currency-euro','Pricing Rules'], 'promotions' => ['bi-tag-fill','Promotions']] as $slug => [$icon, $label]):
+  <?php foreach ([
+    'pricing'     => ['bi-currency-euro',           'Pricing Rules'],
+    'promotions'  => ['bi-tag-fill',                'Promotions'],
+    'promo_codes' => ['bi-ticket-perforated-fill',  'Promo Codes'],
+  ] as $slug => [$icon, $label]):
     $a = $tab === $slug;
   ?>
   <a href="?page=promotions&tab=<?= $slug ?>"
@@ -324,7 +347,7 @@ $eur = fn($v)  => '€' . number_format((float)($v ?? 0), 2);
   </div>
 </div>
 
-<?php else: ?>
+<?php elseif ($tab === 'promotions'): ?>
 <!-- ══════════════════ PROMOTIONS TAB ══════════════════ -->
 
 <?php if (empty($promotions)): ?>
@@ -501,6 +524,355 @@ $eur = fn($v)  => '€' . number_format((float)($v ?? 0), 2);
     </div>
   </div>
 </div>
+
+<?php elseif ($tab === 'promo_codes'): ?>
+<!-- ══════════════════ PROMO CODES TAB ══════════════════ -->
+
+<?php
+$now = date('c');
+$he  = fn($v) => htmlspecialchars((string)($v ?? ''), ENT_QUOTES, 'UTF-8');
+?>
+
+<div class="glass-card">
+  <div class="card-header-bar">
+    <i class="bi bi-ticket-perforated-fill" style="color:var(--accent)"></i>
+    <div class="card-title">Promo Codes</div>
+    <span style="margin-left:auto;font-size:12px;color:var(--text-muted)"><?= count($promoCodes) ?> code<?= count($promoCodes)!==1?'s':'' ?></span>
+  </div>
+  <div class="table-wrap">
+    <table class="glass-table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Type</th>
+          <th>Discount</th>
+          <th>Min Fare</th>
+          <th>Uses</th>
+          <th>Validity</th>
+          <th>Ride Type</th>
+          <th>Active</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      <?php if (empty($promoCodes)): ?>
+        <tr><td colspan="9">
+          <div class="empty-state">
+            <i class="bi bi-ticket-perforated"></i>
+            <h4>No promo codes yet</h4>
+            <p>Create your first discount code for passengers.</p>
+            <button class="btn-primary-glass mt-3" onclick="openPromoCodeModal()">
+              <i class="bi bi-plus-lg"></i> Add Promo Code
+            </button>
+          </div>
+        </td></tr>
+      <?php else: foreach ($promoCodes as $pc):
+        $isActive  = !empty($pc['is_active']);
+        $expired   = !empty($pc['valid_until']) && $pc['valid_until'] < $now;
+        $upcoming  = !empty($pc['valid_from'])  && $pc['valid_from']  > $now;
+        $maxUses   = $pc['max_uses'] ?? null;
+        $usesCount = (int)($pc['uses_count'] ?? 0);
+        $usedUp    = $maxUses !== null && $usesCount >= $maxUses;
+
+        if ($expired || $usedUp) {
+          [$sLabel,$sBg,$sClr] = ['Expired','#F1F5F980','#94a3b8'];
+        } elseif (!$isActive) {
+          [$sLabel,$sBg,$sClr] = ['Paused','#FEF3C780','#d97706'];
+        } elseif ($upcoming) {
+          [$sLabel,$sBg,$sClr] = ['Upcoming','#EFF6FF80','#2563eb'];
+        } else {
+          [$sLabel,$sBg,$sClr] = ['Active','#DCFCE780','#16a34a'];
+        }
+
+        $discLabel = $pc['discount_type'] === 'fixed'
+          ? '€' . number_format((float)$pc['discount_value'], 2) . ' off'
+          : number_format((float)$pc['discount_value'], 0) . '% off';
+
+        $validRange = '';
+        if (!empty($pc['valid_from']) || !empty($pc['valid_until'])) {
+          $vf = !empty($pc['valid_from'])  ? date('d M Y', strtotime($pc['valid_from']))  : '—';
+          $vu = !empty($pc['valid_until']) ? date('d M Y', strtotime($pc['valid_until'])) : '—';
+          $validRange = $vf . ' → ' . $vu;
+        }
+      ?>
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px">
+              <code style="background:var(--accent-soft);color:var(--accent);padding:3px 8px;border-radius:6px;font-size:13px;font-weight:700;letter-spacing:.08em"><?= $he($pc['code']) ?></code>
+              <span class="pp-chip" style="background:<?= $sBg ?>;color:<?= $sClr ?>"><?= $sLabel ?></span>
+            </div>
+            <?php if (!empty($pc['description'])): ?>
+            <div style="font-size:11.5px;color:var(--text-subtle);margin-top:3px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?= $he($pc['description']) ?></div>
+            <?php endif; ?>
+          </td>
+          <td>
+            <span class="pp-chip" style="background:<?= $pc['discount_type']==='fixed'?'rgba(37,99,235,.12)':'rgba(124,58,237,.12)' ?>;color:<?= $pc['discount_type']==='fixed'?'#2563eb':'#7c3aed' ?>">
+              <i class="bi bi-<?= $pc['discount_type']==='fixed'?'cash':'percent' ?>"></i>
+              <?= $pc['discount_type'] === 'fixed' ? 'Fixed' : 'Percent' ?>
+            </span>
+          </td>
+          <td>
+            <strong style="color:var(--accent)"><?= $he($discLabel) ?></strong>
+            <?php if (!empty($pc['max_discount_per_use'])): ?>
+            <div style="font-size:11px;color:var(--text-subtle)">cap €<?= number_format((float)$pc['max_discount_per_use'],2) ?>/use</div>
+            <?php endif; ?>
+            <?php if (!empty($pc['max_discount'])): ?>
+            <div style="font-size:11px;color:var(--text-subtle)">max €<?= number_format((float)$pc['max_discount'],2) ?></div>
+            <?php endif; ?>
+          </td>
+          <td>€<?= number_format((float)($pc['min_fare'] ?? 0), 2) ?></td>
+          <td>
+            <div style="font-size:13.5px;font-weight:600"><?= $usesCount ?><?= $maxUses !== null ? '<span style="color:var(--text-subtle);font-weight:400"> / ' . $maxUses . '</span>' : '' ?></div>
+            <?php if (!empty($pc['max_uses_per_passenger'])): ?>
+            <div style="font-size:11px;color:var(--text-subtle)"><?= (int)$pc['max_uses_per_passenger'] ?>/passenger</div>
+            <?php endif; ?>
+          </td>
+          <td style="font-size:12px;color:var(--text-muted)">
+            <?= $validRange ?: '<span style="color:var(--text-subtle)">No limit</span>' ?>
+          </td>
+          <td>
+            <?php if (!empty($pc['ride_type'])): ?>
+            <span class="pp-chip" style="background:var(--hover-bg);color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em"><?= $he($pc['ride_type']) ?></span>
+            <?php else: ?>
+            <span style="color:var(--text-subtle);font-size:12px">All</span>
+            <?php endif; ?>
+          </td>
+          <td>
+            <label class="pp-sw">
+              <input type="checkbox" <?= $isActive ? 'checked' : '' ?>
+                onchange="togglePromoCode('<?= $he($pc['id']) ?>',this.checked)">
+              <span class="pp-sl"></span>
+            </label>
+          </td>
+          <td>
+            <div style="display:flex;gap:6px">
+              <button class="btn-icon" title="Edit" onclick="editPromoCode('<?= $he($pc['id']) ?>')">
+                <i class="bi bi-pencil-fill"></i>
+              </button>
+              <button class="btn-icon danger" title="Delete"
+                onclick="deletePromoCodeConfirm('<?= $he($pc['id']) ?>','<?= $he($pc['code']) ?>')">
+                <i class="bi bi-trash3-fill"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      <?php endforeach; endif; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Promo Code Modal -->
+<div class="modal-overlay" id="promoCodeModal">
+  <div class="modal-box" style="max-width:620px;max-height:92vh;overflow-y:auto">
+    <div class="modal-header">
+      <div class="modal-title" id="promoCodeModalTitle">Add Promo Code</div>
+      <button class="modal-close"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div style="padding:22px">
+      <input type="hidden" id="prc_id">
+
+      <div class="ms-divider">Code &amp; Discount</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+
+        <div style="grid-column:1/-1">
+          <label class="form-label">Promo Code <span style="color:#dc2626">*</span></label>
+          <div style="position:relative">
+            <input type="text" class="glass-input" id="prc_code" placeholder="e.g. SUMMER25"
+              style="text-transform:uppercase;letter-spacing:.06em;font-weight:700"
+              oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9_-]/g,'')">
+          </div>
+          <div style="font-size:11px;color:var(--text-subtle);margin-top:3px">Letters, numbers, hyphens and underscores only.</div>
+        </div>
+
+        <div style="grid-column:1/-1">
+          <label class="form-label">Description</label>
+          <input type="text" class="glass-input" id="prc_description" placeholder="e.g. Summer 2025 discount for new passengers">
+        </div>
+
+        <div>
+          <label class="form-label">Discount Type <span style="color:#dc2626">*</span></label>
+          <select class="glass-select" id="prc_discount_type" onchange="updateDiscountLabel()">
+            <option value="percent">Percentage (%)</option>
+            <option value="fixed">Fixed Amount (€)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="form-label"><span id="prc_discount_value_label">Discount Value (%)</span> <span style="color:#dc2626">*</span></label>
+          <input type="number" class="glass-input" id="prc_discount_value" step="0.01" min="0.01" placeholder="e.g. 20">
+        </div>
+
+        <div>
+          <label class="form-label">Min Fare (€)</label>
+          <input type="number" class="glass-input" id="prc_min_fare" step="0.01" min="0" value="0" placeholder="0.00">
+          <div style="font-size:11px;color:var(--text-subtle);margin-top:3px">Minimum ride fare to apply this code.</div>
+        </div>
+
+        <div>
+          <label class="form-label">Max Discount per Use (€)</label>
+          <input type="number" class="glass-input" id="prc_max_discount_per_use" step="0.01" min="0" placeholder="No cap">
+          <div style="font-size:11px;color:var(--text-subtle);margin-top:3px">Only for % type: cap saving per ride.</div>
+        </div>
+
+        <div>
+          <label class="form-label">Max Total Discount (€)</label>
+          <input type="number" class="glass-input" id="prc_max_discount" step="0.01" min="0" placeholder="Unlimited">
+        </div>
+
+      </div>
+
+      <div class="ms-divider">Usage Limits</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+
+        <div>
+          <label class="form-label">Max Total Uses</label>
+          <input type="number" class="glass-input" id="prc_max_uses" min="1" placeholder="Unlimited">
+        </div>
+
+        <div>
+          <label class="form-label">Max Uses per Passenger</label>
+          <input type="number" class="glass-input" id="prc_max_uses_per_passenger" min="1" placeholder="Unlimited">
+        </div>
+
+      </div>
+
+      <div class="ms-divider">Validity &amp; Scope</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+
+        <div>
+          <label class="form-label">Valid From</label>
+          <input type="datetime-local" class="glass-input" id="prc_valid_from">
+        </div>
+
+        <div>
+          <label class="form-label">Valid Until</label>
+          <input type="datetime-local" class="glass-input" id="prc_valid_until">
+        </div>
+
+        <div style="grid-column:1/-1">
+          <label class="form-label">Ride Type</label>
+          <select class="glass-select" id="prc_ride_type">
+            <option value="all">All Ride Types</option>
+            <?php foreach ($rideTypes as $rt): ?>
+            <option value="<?= $he(strtolower(str_replace(' ','_',$rt['name']))) ?>"><?= $he($rt['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--hover-bg);border-radius:var(--radius-sm);margin-bottom:22px">
+        <label class="pp-sw"><input type="checkbox" id="prc_is_active" checked><span class="pp-sl"></span></label>
+        <div>
+          <div style="font-weight:500;font-size:13.5px;color:var(--text-primary)">Active</div>
+          <div style="font-size:12px;color:var(--text-muted)">Passengers can use this code when active.</div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding:0;border:none;background:transparent">
+        <button type="button" class="btn-glass" onclick="Modal.close('promoCodeModal')">Cancel</button>
+        <button type="button" class="btn-primary-glass" id="savePromoCodeBtn" onclick="savePromoCode()">
+          <i class="bi bi-check-lg"></i> Save Code
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════ PROMO CODES ══════════════════════════════════
+
+function updateDiscountLabel() {
+  const type = document.getElementById('prc_discount_type').value;
+  document.getElementById('prc_discount_value_label').textContent =
+    type === 'fixed' ? 'Discount Value (€)' : 'Discount Value (%)';
+  const capRow = document.getElementById('prc_max_discount_per_use').closest('div').parentElement;
+  if (type === 'fixed') {
+    document.getElementById('prc_max_discount_per_use').value = '';
+  }
+}
+
+function openPromoCodeModal(data = null) {
+  document.getElementById('promoCodeModalTitle').textContent = data ? 'Edit Promo Code' : 'Add Promo Code';
+  const f = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
+  const c = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!(val === true || val == 1); };
+
+  f('prc_id',                    data?.id ?? '');
+  f('prc_code',                  data?.code ?? '');
+  f('prc_description',           data?.description ?? '');
+  f('prc_discount_type',         data?.discount_type ?? 'percent');
+  f('prc_discount_value',        data?.discount_value ?? '');
+  f('prc_min_fare',              data?.min_fare ?? '0');
+  f('prc_max_discount_per_use',  data?.max_discount_per_use ?? '');
+  f('prc_max_discount',          data?.max_discount ?? '');
+  f('prc_max_uses',              data?.max_uses ?? '');
+  f('prc_max_uses_per_passenger',data?.max_uses_per_passenger ?? '');
+  f('prc_valid_from',            data?.valid_from  ? data.valid_from.slice(0,16)  : '');
+  f('prc_valid_until',           data?.valid_until ? data.valid_until.slice(0,16) : '');
+
+  const rt = document.getElementById('prc_ride_type');
+  rt.value = data?.ride_type ?? 'all';
+  if (!rt.value) rt.value = 'all';
+
+  c('prc_is_active', data ? (data.is_active === true || data.is_active == 1) : true);
+  updateDiscountLabel();
+  Modal.open('promoCodeModal');
+}
+
+async function editPromoCode(id) {
+  const res = await ppPost({ action: 'get_promo_code', id });
+  if (res.success) openPromoCodeModal(res.data);
+  else Toast.show('Failed to load promo code.', 'error');
+}
+
+async function savePromoCode() {
+  const code = document.getElementById('prc_code').value.trim();
+  const val  = document.getElementById('prc_discount_value').value.trim();
+  if (!code) { Toast.show('Code is required.', 'error'); document.getElementById('prc_code').focus(); return; }
+  if (!val || parseFloat(val) <= 0) { Toast.show('Discount value must be greater than 0.', 'error'); document.getElementById('prc_discount_value').focus(); return; }
+
+  const id  = document.getElementById('prc_id').value;
+  const btn = document.getElementById('savePromoCodeBtn');
+  btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving…';
+
+  const res = await ppPost({
+    action:                  id ? 'update_promo_code' : 'create_promo_code', id,
+    code,
+    description:             document.getElementById('prc_description').value,
+    discount_type:           document.getElementById('prc_discount_type').value,
+    discount_value:          val,
+    min_fare:                document.getElementById('prc_min_fare').value || '0',
+    max_discount_per_use:    document.getElementById('prc_max_discount_per_use').value,
+    max_discount:            document.getElementById('prc_max_discount').value,
+    max_uses:                document.getElementById('prc_max_uses').value,
+    max_uses_per_passenger:  document.getElementById('prc_max_uses_per_passenger').value,
+    valid_from:              document.getElementById('prc_valid_from').value,
+    valid_until:             document.getElementById('prc_valid_until').value,
+    ride_type:               document.getElementById('prc_ride_type').value,
+    is_active:               document.getElementById('prc_is_active').checked ? '1' : '0',
+  });
+
+  btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg"></i> Save Code';
+  Toast.show(res.message, res.success ? 'success' : 'error');
+  if (res.success) { Modal.close('promoCodeModal'); setTimeout(() => location.reload(), 600); }
+}
+
+async function togglePromoCode(id, active) {
+  const res = await ppPost({ action: 'toggle_promo_code', id, active: active ? '1' : '0' });
+  Toast.show(res.message, res.success ? 'success' : 'error');
+  if (!res.success) location.reload();
+}
+
+function deletePromoCodeConfirm(id, code) {
+  ppShowDelete(`Delete promo code "${code}"? This cannot be undone.`, async () => {
+    const res = await ppPost({ action: 'delete_promo_code', id });
+    Toast.show(res.message, res.success ? 'success' : 'error');
+    Modal.close('ppDeleteModal');
+    if (res.success) setTimeout(() => location.reload(), 600);
+  });
+}
+</script>
 
 <?php endif; ?>
 

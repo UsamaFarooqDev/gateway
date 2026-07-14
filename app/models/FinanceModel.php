@@ -344,7 +344,7 @@ class FinanceModel {
 
         $lookups = [];
         if (!empty($driverIds)) $lookups['d'] = ['table'=>'drivers',    'params'=>['select'=>'id,full_name,phone,email,type,license_number,vehicle_number,plate_no','id'=>'in.('.implode(',', $driverIds).')']];
-        if (!empty($userIds))   $lookups['p'] = ['table'=>'passengers', 'params'=>['select'=>'id,name,phone,email','id'=>'in.('.implode(',', $userIds).')']];
+        if (!empty($userIds))   $lookups['p'] = ['table'=>'passengers', 'params'=>['select'=>'id,name,phone,email,business_name,tax_number','id'=>'in.('.implode(',', $userIds).')']];
 
         $driverMap    = [];
         $passengerMap = [];
@@ -361,18 +361,22 @@ class FinanceModel {
 
         return array_map(function ($r) use ($driverMap, $passengerMap) {
             $driver    = isset($r['driver_id']) ? ($driverMap[$r['driver_id']] ?? null) : null;
-            $passenger = isset($r['user_id']) ? ($passengerMap[$r['user_id']] ?? null) : null;
+            $passenger = isset($r['user_id'])   ? ($passengerMap[$r['user_id']] ?? null) : null;
+            $bizName   = $passenger['business_name'] ?? null;
+            $taxNumber = $passenger['tax_number']    ?? null;
             return [
                 ...$r,
-                'fare'            => $r['final_fare'] ?? $r['fare_eur'],
-                'driver_name'     => $driver['full_name'] ?? null,
-                'driver_phone'    => $driver['phone'] ?? null,
-                'driver_email'    => $driver['email'] ?? null,
-                'vehicle_type'    => $driver['type'] ?? null,
-                'driver_license'  => $driver['license_number'] ?? $driver['vehicle_number'] ?? $driver['plate_no'] ?? null,
-                'passenger_name'  => $passenger['name'] ?? null,
-                'passenger_phone' => $passenger['phone'] ?? null,
-                'passenger_email' => $passenger['email'] ?? null,
+                'fare'                    => $r['final_fare'] ?? $r['fare_eur'],
+                'driver_name'             => $driver['full_name'] ?? null,
+                'driver_phone'            => $driver['phone'] ?? null,
+                'driver_email'            => $driver['email'] ?? null,
+                'vehicle_type'            => $driver['type'] ?? null,
+                'driver_license'          => $driver['license_number'] ?? $driver['vehicle_number'] ?? $driver['plate_no'] ?? null,
+                'passenger_name'          => $passenger['name'] ?? null,
+                'passenger_phone'         => $passenger['phone'] ?? null,
+                'passenger_email'         => $passenger['email'] ?? null,
+                'passenger_business_name' => ($bizName   !== null && strtoupper(trim((string)$bizName))   !== 'NULL') ? $bizName   : null,
+                'passenger_tax_number'    => ($taxNumber !== null && strtoupper(trim((string)$taxNumber)) !== 'NULL') ? $taxNumber : null,
             ];
         }, $rows);
     }

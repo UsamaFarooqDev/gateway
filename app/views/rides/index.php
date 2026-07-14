@@ -43,13 +43,16 @@ foreach ($rides as $r) {
         'driver_name'     => $r['driver_name'] ?? '',
         'driver_phone'    => $r['driver_phone'] ?? '',
         'driver_email'    => $r['driver_email'] ?? '',
-        'passenger_name'  => $r['passenger_name'] ?? '',
-        'passenger_phone' => $r['passenger_phone'] ?? '',
-        'passenger_email' => $r['passenger_email'] ?? '',
-        'distance_km'     => $r['distance_km'] ?? null,
-        'duration_min'    => $r['duration_min'] ?? null,
-        'notes'           => $r['notes'] ?? '',
-        'cancelled_by'    => $r['cancelled_by'] ?? null,
+        'payment_method'             => $r['payment_method'] ?? '',
+        'passenger_name'             => $r['passenger_name'] ?? '',
+        'passenger_phone'            => $r['passenger_phone'] ?? '',
+        'passenger_email'            => $r['passenger_email'] ?? '',
+        'passenger_business_name'    => $r['passenger_business_name'] ?? null,
+        'passenger_tax_number'       => $r['passenger_tax_number'] ?? null,
+        'distance_km'                => $r['distance_km'] ?? null,
+        'duration_min'               => $r['duration_min'] ?? null,
+        'notes'                      => $r['notes'] ?? '',
+        'cancelled_by'               => $r['cancelled_by'] ?? null,
     ];
 }
 

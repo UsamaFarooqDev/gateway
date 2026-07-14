@@ -132,6 +132,70 @@ class PromotionsModel {
         ], fn($v) => $v !== null);
     }
 
+    // ── Promo Codes ───────────────────────────────────────────────────
+
+    public function getPromoCodes(): array {
+        return $this->db->select('promo_codes', [
+            'select' => '*',
+            'order'  => 'created_at.desc',
+        ]);
+    }
+
+    public function getPromoCodeById(string $id): ?array {
+        $rows = $this->db->select('promo_codes', ['id' => 'eq.' . $id, 'limit' => 1]);
+        return $rows[0] ?? null;
+    }
+
+    public function createPromoCode(array $data): ?array {
+        return $this->db->insert('promo_codes', $this->sanitizePromoCode($data));
+    }
+
+    public function updatePromoCode(string $id, array $data): bool {
+        return $this->db->update('promo_codes', $this->sanitizePromoCode($data), ['id' => 'eq.' . $id]);
+    }
+
+    public function deletePromoCode(string $id): bool {
+        return $this->db->delete('promo_codes', ['id' => 'eq.' . $id]);
+    }
+
+    public function togglePromoCode(string $id, bool $active): bool {
+        return $this->db->update('promo_codes', ['is_active' => $active], ['id' => 'eq.' . $id]);
+    }
+
+    private function sanitizePromoCode(array $d): array {
+        $out = [];
+
+        if (isset($d['code'])) {
+            $out['code'] = strtoupper(preg_replace('/[^A-Z0-9_-]/i', '', trim($d['code'])));
+        }
+        if (isset($d['description'])) {
+            $out['description'] = trim($d['description']);
+        }
+        if (isset($d['discount_type'])) {
+            $out['discount_type'] = in_array($d['discount_type'], ['percent', 'fixed']) ? $d['discount_type'] : 'percent';
+        }
+        if (isset($d['discount_value'])) {
+            $out['discount_value'] = round(max(0.01, (float)$d['discount_value']), 2);
+        }
+
+        $out['min_fare']  = round(max(0.0, (float)($d['min_fare'] ?? 0)), 2);
+        $out['is_active'] = filter_var($d['is_active'] ?? true, FILTER_VALIDATE_BOOLEAN);
+
+        foreach (['max_discount', 'max_discount_per_use'] as $k) {
+            $out[$k] = (isset($d[$k]) && $d[$k] !== '') ? round((float)$d[$k], 2) : null;
+        }
+        foreach (['max_uses', 'max_uses_per_passenger'] as $k) {
+            $out[$k] = (isset($d[$k]) && $d[$k] !== '') ? max(1, (int)$d[$k]) : null;
+        }
+        foreach (['valid_from', 'valid_until'] as $k) {
+            $out[$k] = (isset($d[$k]) && trim($d[$k]) !== '') ? trim($d[$k]) : null;
+        }
+        $out['ride_type'] = (isset($d['ride_type']) && trim($d['ride_type']) !== '' && $d['ride_type'] !== 'all')
+            ? trim($d['ride_type']) : null;
+
+        return $out;
+    }
+
     // ── Stats ─────────────────────────────────────────────────────────
 
     public function getStats(): array {
@@ -141,12 +205,21 @@ class PromotionsModel {
             1 => ['table' => 'pricing_config', 'params' => ['select' => 'id', 'is_active' => 'eq.true'], 'withCount' => true],
             2 => ['table' => 'promotions',     'params' => ['select' => 'id'], 'withCount' => true],
             3 => ['table' => 'promotions',     'params' => ['select' => 'id', 'is_active' => 'eq.true', 'ends_at' => 'gte.' . $now], 'withCount' => true],
+            4 => ['table' => 'promo_codes',    'params' => ['select' => 'id'], 'withCount' => true],
+            5 => ['table' => 'promo_codes',    'params' => ['select' => 'id', 'is_active' => 'eq.true'], 'withCount' => true],
+            6 => ['table' => 'promo_codes',    'params' => ['select' => 'uses_count']],
         ]);
+
+        $totalUses = array_sum(array_column($res[6], 'uses_count'));
+
         return [
-            'total_pricing'  => $res[0]['count'],
-            'active_pricing' => $res[1]['count'],
-            'total_promos'   => $res[2]['count'],
-            'active_promos'  => $res[3]['count'],
+            'total_pricing'       => $res[0]['count'],
+            'active_pricing'      => $res[1]['count'],
+            'total_promos'        => $res[2]['count'],
+            'active_promos'       => $res[3]['count'],
+            'total_promo_codes'   => $res[4]['count'],
+            'active_promo_codes'  => $res[5]['count'],
+            'promo_codes_uses'    => $totalUses,
         ];
     }
 }
