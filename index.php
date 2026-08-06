@@ -22,7 +22,7 @@ $routes = [
     'passengers'    => ['file' => 'app/controllers/PassengersController.php',  'class' => 'PassengersController'],
     'rides'         => ['file' => 'app/controllers/RidesController.php', 'class' => 'RidesController'],
     'dispatcher'    => null,
-    'corporate'     => null,
+    'corporate'     => ['file' => 'app/controllers/CorporateController.php', 'class' => 'CorporateController'],
     'fleet'         => ['file' => 'app/controllers/FleetController.php', 'class' => 'FleetController'],
     'finance'       => ['file' => 'app/controllers/FinanceController.php', 'class' => 'FinanceController'],
     'promotions'    => ['file' => 'app/controllers/PromotionsController.php', 'class' => 'PromotionsController'],
