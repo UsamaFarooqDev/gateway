@@ -110,18 +110,18 @@ function overallStatus(array $d): array {
               <?php if (!empty($rt['image_url'])): ?>
                 <img src="<?= htmlspecialchars($rt['image_url']) ?>"
                      alt="<?= htmlspecialchars($rt['name']) ?>"
-                     style="width:72px;height:52px;border-radius:8px;object-fit:cover;border:1px solid var(--border);background:#f1f5f9;flex-shrink:0"
+                     style="width:60px;height:45px;border-radius:8px;object-fit:contain;object-position:center;flex-shrink:0;"
                      onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                <div style="display:none;width:72px;height:52px;border-radius:8px;background:rgba(243,122,32,0.08);border:1px solid var(--border);align-items:center;justify-content:center;flex-shrink:0;font-size:24px">
+                <div style="display:none;width:60px;height:45px;border-radius:8px;background:rgba(243,122,32,0.08);border:1px solid var(--border);align-items:center;justify-content:center;flex-shrink:0;font-size:20px">
                   <?= !empty($rt['icon_emoji']) ? htmlspecialchars($rt['icon_emoji']) : '<i class="bi bi-car-front" style="color:var(--accent)"></i>' ?>
                 </div>
               <?php elseif (!empty($rt['icon_emoji'])): ?>
-                <div style="width:72px;height:52px;border-radius:8px;background:rgba(243,122,32,0.08);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:28px">
+                <div style="width:60px;height:45px;border-radius:8px;background:rgba(243,122,32,0.08);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:22px">
                   <?= htmlspecialchars($rt['icon_emoji']) ?>
                 </div>
               <?php else: ?>
-                <div style="width:72px;height:52px;border-radius:8px;background:rgba(243,122,32,0.08);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                  <i class="bi bi-image" style="color:var(--text-subtle);font-size:22px"></i>
+                <div style="width:60px;height:45px;border-radius:8px;background:rgba(243,122,32,0.08);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                  <i class="bi bi-image" style="color:var(--text-subtle);font-size:18px"></i>
                 </div>
               <?php endif; ?>
               <div>
@@ -487,12 +487,12 @@ foreach ($compliance as $cd) {
 
 <?php $extraScripts = <<<'SCRIPTS'
 <style>
-.rt-switch { position:relative; display:inline-block; width:46px; height:26px; cursor:pointer; flex-shrink:0 }
+.rt-switch { position:relative; display:inline-block; width:34px; height:19px; cursor:pointer; flex-shrink:0 }
 .rt-switch input { opacity:0; width:0; height:0; position:absolute }
 .rt-slider { position:absolute; inset:0; background:#d1d5db; border-radius:99px; transition:.25s }
-.rt-slider::before { content:''; position:absolute; width:20px; height:20px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.25s; box-shadow:0 1px 4px rgba(0,0,0,.25) }
+.rt-slider::before { content:''; position:absolute; width:14px; height:14px; left:2.5px; bottom:2.5px; background:#fff; border-radius:50%; transition:.25s; box-shadow:0 1px 4px rgba(0,0,0,.25) }
 .rt-switch input:checked + .rt-slider { background:var(--accent) }
-.rt-switch input:checked + .rt-slider::before { transform:translateX(20px) }
+.rt-switch input:checked + .rt-slider::before { transform:translateX(15px) }
 .rt-img-preview { width:100%; height:120px; border-radius:8px; object-fit:cover; border:1px solid var(--border); margin-top:8px; display:none }
 </style>
 <script>

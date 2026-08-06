@@ -283,7 +283,9 @@ function buildDriverApprovedAltBody($driverName) {
     $name = $driverName ?: 'Driver';
     return "Dear {$name},\n\n"
         . "Great news — your documents have been reviewed and your PowerCabs driver account is now approved. "
-        . "You can go online in the app and start accepting ride requests right away.\n\n"
+        . "Complete the step below to activate your account and start accepting ride requests.\n\n"
+        . "ROOF-TOP STICKER\n"
+        . "The PowerCabs team will dispatch a roof-top sticker to your registered address. Once you receive it, please paste it on your cab, then upload a photo of the fitted sticker in your driver application to begin your journey.\n\n"
         . "GO ONLINE ANYTIME\n"
         . "Open the PowerCabs Driver app and tap Go Online whenever you're ready to start earning.\n\n"
         . "START ACCEPTING RIDES\n"
@@ -333,17 +335,34 @@ function buildDriverApprovedBody($driverName) {
   <tr>
     <td style="padding:24px 40px 0;font-size:14px;line-height:1.7;color:#444">
       <p style="margin:0 0 12px">Dear {$safeName},</p>
-      <p style="margin:0">Great news — your documents have been reviewed and your PowerCabs driver account is now <strong style="color:#16a34a">approved</strong>. You can go online in the app and start accepting ride requests right away.</p>
+      <p style="margin:0">Great news — your documents have been reviewed and your PowerCabs driver account is now <strong style="color:#16a34a">approved</strong>. Just complete the step below to activate your account and start accepting ride requests.</p>
     </td>
   </tr>
 
-  <!-- Info card 1: Go Online -->
+  <!-- Info card 1: Roof-Top Sticker -->
   <tr>
     <td style="padding:24px 40px 0">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF8F2;border-radius:10px;padding:20px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF8F2;border-radius:10px;padding:20px;border:1px solid #FBD5B5">
         <tr>
           <td width="54" valign="top" style="padding:0 14px 0 0">
             <div style="width:44px;height:44px;background:#FFF0E0;border-radius:10px;text-align:center;line-height:44px;font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:800;color:#F37A20">1</div>
+          </td>
+          <td valign="top" style="font-size:13px;line-height:1.6;color:#555">
+            <strong style="font-size:14px;color:#1A1A2E">Roof-Top Sticker</strong> <span style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:99px;background:#FFE4C7;color:#B85C00;font-size:10.5px;font-weight:700;letter-spacing:.3px">ACTION NEEDED</span><br>
+            The PowerCabs team will dispatch a roof-top sticker to your registered address. Once you receive it, please paste it on your cab, then upload a photo of the fitted sticker in your driver application to begin your journey.
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- Info card 2: Go Online -->
+  <tr>
+    <td style="padding:12px 40px 0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF8F2;border-radius:10px;padding:20px">
+        <tr>
+          <td width="54" valign="top" style="padding:0 14px 0 0">
+            <div style="width:44px;height:44px;background:#FFF0E0;border-radius:10px;text-align:center;line-height:44px;font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:800;color:#F37A20">2</div>
           </td>
           <td valign="top" style="font-size:13px;line-height:1.6;color:#555">
             <strong style="font-size:14px;color:#1A1A2E">Go Online Anytime</strong><br>
@@ -354,13 +373,13 @@ function buildDriverApprovedBody($driverName) {
     </td>
   </tr>
 
-  <!-- Info card 2: Accept Rides -->
+  <!-- Info card 3: Accept Rides -->
   <tr>
     <td style="padding:12px 40px 0">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF8F2;border-radius:10px;padding:20px">
         <tr>
           <td width="54" valign="top" style="padding:0 14px 0 0">
-            <div style="width:44px;height:44px;background:#FFF0E0;border-radius:10px;text-align:center;line-height:44px;font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:800;color:#F37A20">2</div>
+            <div style="width:44px;height:44px;background:#FFF0E0;border-radius:10px;text-align:center;line-height:44px;font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:800;color:#F37A20">3</div>
           </td>
           <td valign="top" style="font-size:13px;line-height:1.6;color:#555">
             <strong style="font-size:14px;color:#1A1A2E">Start Accepting Rides</strong><br>
@@ -371,13 +390,13 @@ function buildDriverApprovedBody($driverName) {
     </td>
   </tr>
 
-  <!-- Info card 3: Get Paid -->
+  <!-- Info card 4: Get Paid -->
   <tr>
     <td style="padding:12px 40px 0">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FFF8F2;border-radius:10px;padding:20px">
         <tr>
           <td width="54" valign="top" style="padding:0 14px 0 0">
-            <div style="width:44px;height:44px;background:#FFF0E0;border-radius:10px;text-align:center;line-height:44px;font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:800;color:#F37A20">3</div>
+            <div style="width:44px;height:44px;background:#FFF0E0;border-radius:10px;text-align:center;line-height:44px;font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:800;color:#F37A20">4</div>
           </td>
           <td valign="top" style="font-size:13px;line-height:1.6;color:#555">
             <strong style="font-size:14px;color:#1A1A2E">Get Paid Weekly</strong><br>
