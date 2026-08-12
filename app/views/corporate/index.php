@@ -260,7 +260,7 @@ $filterCid = htmlspecialchars($_GET['cid'] ?? '', ENT_QUOTES);
           <th>Employee</th>
           <th>Route</th>
           <th>Payment</th>
-          <th>Meter Fare</th>
+          <th>Ride Fare</th>
           <th>Status</th>
         </tr>
       </thead>
@@ -280,33 +280,41 @@ $filterCid = htmlspecialchars($_GET['cid'] ?? '', ENT_QUOTES);
           ];
           foreach ($rides as $i => $r):
             [$sc, $sbg] = $statusColors[$r['status'] ?? ''] ?? ['var(--text-subtle)','var(--hover-bg)'];
-            $fare = (float)($r['final_fare'] ?? $r['fare_eur'] ?? 0);
+            $fare = (float)($r['fare'] ?? $r['total_charged'] ?? $r['final_fare'] ?? $r['fare_eur'] ?? 0);
         ?>
         <tr>
           <td style="color:var(--text-subtle);font-size:12px"><?= $i + 1 ?></td>
-          <td style="font-size:12px">
-            <?php
-              $dt = new DateTime($r['created_at'] ?? '');
-              echo htmlspecialchars($dt->format('d M Y H:i'));
-            ?>
+          <td style="font-size:12px;white-space:nowrap">
+            <?php try { $dt = new DateTime($r['created_at'] ?? ''); echo htmlspecialchars($dt->format('d M Y')); } catch (Throwable $e) { echo '—'; } ?>
           </td>
           <td>
-            <div style="font-size:13px;font-weight:500"><?= htmlspecialchars($r['employee_name']) ?></div>
-            <div style="font-size:11px;color:var(--text-subtle)"><?= htmlspecialchars($r['employee_email']) ?></div>
+            <div style="font-size:13px;font-weight:500"><?= htmlspecialchars($r['employee_name'] ?? '—') ?></div>
+            <div style="font-size:11px;color:var(--text-subtle)"><?= htmlspecialchars($r['employee_email'] ?? '') ?></div>
           </td>
-          <td style="font-size:11.5px;max-width:220px">
-            <div style="color:var(--text-primary)"><i class="bi bi-geo-alt-fill" style="color:#16a34a;font-size:10px"></i> <?= htmlspecialchars($r['pickup_addr'] ?? '—') ?></div>
-            <div style="color:var(--text-muted)"><i class="bi bi-geo-alt" style="font-size:10px"></i> <?= htmlspecialchars($r['dest_addr'] ?? '—') ?></div>
+          <td style="font-size:11.5px">
+            <div><i class="bi bi-geo-alt-fill" style="color:#16a34a;font-size:10px"></i> <?= htmlspecialchars($r['pickup_addr'] ?? '—') ?></div>
+            <div style="color:var(--text-muted);margin-top:2px"><i class="bi bi-geo-alt" style="font-size:10px"></i> <?= htmlspecialchars($r['dest_addr'] ?? '—') ?></div>
           </td>
-          <td style="font-size:12px;color:var(--text-muted)"><?= htmlspecialchars(ucfirst($r['payment_method'] ?? 'Cash')) ?></td>
-          <td style="font-weight:600;color:var(--accent)">€<?= number_format($fare, 2) ?></td>
+          <td style="font-size:12px;color:var(--text-muted);white-space:nowrap"><?= htmlspecialchars(ucfirst($r['payment_method'] ?? 'Cash')) ?></td>
+          <td style="font-weight:600;color:var(--accent);white-space:nowrap">€<?= number_format($fare, 2) ?></td>
           <td>
-            <span style="background:<?= $sbg ?>;color:<?= $sc ?>;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;text-transform:capitalize">
+            <span style="background:<?= $sbg ?>;color:<?= $sc ?>;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;text-transform:capitalize;white-space:nowrap">
               <?= htmlspecialchars($r['status'] ?? '—') ?>
             </span>
           </td>
         </tr>
         <?php endforeach; endif; ?>
+        <?php if (!empty($rides)):
+          $rideTotal = array_sum(array_map(fn($r) => (float)($r['fare'] ?? $r['total_charged'] ?? $r['final_fare'] ?? $r['fare_eur'] ?? 0), $rides));
+        ?>
+        <tr style="font-weight:700;border-top:2px solid var(--border)">
+          <td colspan="5" style="padding:10px 8px;font-size:12px;color:var(--text-muted)">
+            Total — <?= count($rides) ?> ride<?= count($rides) !== 1 ? 's' : '' ?>
+          </td>
+          <td style="font-size:15px;font-weight:700;color:var(--accent);white-space:nowrap">€<?= number_format($rideTotal, 2) ?></td>
+          <td></td>
+        </tr>
+        <?php endif; ?>
       </tbody>
     </table>
   </div>
@@ -341,7 +349,7 @@ $filterCid = htmlspecialchars($_GET['cid'] ?? '', ENT_QUOTES);
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:5px">To *</div>
       <input type="date" id="invTo" class="glass-input" style="width:155px">
     </div>
-    <button class="btn-primary-glass" onclick="computeCorpInvoice()">
+    <button type="button" class="btn-primary-glass" onclick="computeCorpInvoice(this)">
       <i class="bi bi-calculator"></i> Compute Invoice
     </button>
     <div id="billingModelBadge" style="display:none;padding:6px 14px;border-radius:12px;font-size:12px;font-weight:600"></div>
@@ -825,14 +833,14 @@ function updateBillingModelBadge() {
     : 'Regular Billing';
 }
 
-function computeCorpInvoice() {
+function computeCorpInvoice(invokeBtn) {
   const cid  = document.getElementById('invCid').value;
   const from = document.getElementById('invFrom').value;
   const to   = document.getElementById('invTo').value;
-  if (!cid)  { Toast.show('Please select a company.', 'error'); return; }
+  if (!cid)         { Toast.show('Please select a company.', 'error'); return; }
   if (!from || !to) { Toast.show('Please select a date range.', 'error'); return; }
 
-  const btn = document.querySelector('[onclick="computeCorpInvoice()"]');
+  const btn  = invokeBtn;
   const orig = btn.innerHTML;
   btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Computing…';
   btn.disabled  = true;
@@ -844,34 +852,52 @@ function computeCorpInvoice() {
   fd.append('date_to',   to);
 
   fetch('?page=corporate', {method:'POST', body:fd})
-    .then(r => r.json())
-    .then(d => {
+    .then(r => r.text())
+    .then(raw => {
       btn.innerHTML = orig;
       btn.disabled  = false;
-      if (!d.success) { Toast.show(d.message || 'Failed to compute invoice.', 'error'); return; }
+
+      // Strip any PHP warnings/notices that may prefix the JSON
+      const jsonStart = raw.indexOf('{');
+      const cleaned   = jsonStart >= 0 ? raw.slice(jsonStart) : raw;
+
+      let d;
+      try { d = JSON.parse(cleaned); } catch(e) {
+        console.error('Invoice parse error:', raw.slice(0, 500));
+        Toast.show('Server error — check console for details.', 'error');
+        return;
+      }
+      if (!d.success) {
+        Toast.show(d.message || 'Failed to compute invoice.', 'error');
+        return;
+      }
+
       _corpInvoiceData = d;
-      const html = buildCorpInvoiceHtml(d);
-      document.getElementById('corpInvoiceContent').innerHTML = html;
-      document.getElementById('corpInvoicePreview').style.display = 'block';
+      document.getElementById('corpInvoiceContent').innerHTML = buildCorpInvoiceHtml(d);
+      const preview = document.getElementById('corpInvoicePreview');
+      preview.style.display = 'block';
       document.getElementById('dlCorpInvBtn').style.display = 'inline-flex';
-      // Admin profit summary (not in invoice, only visible to admin)
+
+      // Admin profit summary (internal only, not printed)
       const eur = n => '€' + parseFloat(n || 0).toFixed(2);
       const aps = document.getElementById('adminProfitSummary');
       if (d.billing_model === 'revenue') {
         document.getElementById('apsTotalFare').textContent   = eur(d.total_ride_fare);
-        document.getElementById('apsCredits').textContent     = '-' + eur(d.total_credits);
+        document.getElementById('apsCredits').textContent     = eur(d.total_credits);
         document.getElementById('apsPcProfit').textContent    = eur(d.total_pc_profit);
         document.getElementById('apsTotalCharge').textContent = eur(d.total_charge);
         aps.style.display = 'block';
+        aps.scrollIntoView({behavior:'smooth', block:'start'});
       } else {
         aps.style.display = 'none';
+        preview.scrollIntoView({behavior:'smooth', block:'start'});
       }
-      document.getElementById('adminProfitSummary').scrollIntoView({behavior:'smooth', block:'start'});
     })
-    .catch(() => {
+    .catch(err => {
       btn.innerHTML = orig;
       btn.disabled  = false;
-      Toast.show('Network error.', 'error');
+      console.error('Invoice fetch error:', err);
+      Toast.show('Network error computing invoice.', 'error');
     });
 }
 

@@ -56,10 +56,11 @@ foreach ($rides as $r) {
     ];
 }
 
-$activeFilter = $filters['status'] ?? 'all';
-$searchQuery  = $filters['search'] ?? '';
-$dateFrom     = $filters['date_from'] ?? '';
-$dateTo       = $filters['date_to'] ?? '';
+$activeFilter        = $filters['status'] ?? 'all';
+$searchQuery         = $filters['search'] ?? '';
+$dateFrom            = $filters['date_from'] ?? '';
+$dateTo              = $filters['date_to'] ?? '';
+$isFareDiscrepancy   = ($activeFilter === 'discrepancy');
 ?>
 
 <!-- Page Header -->
@@ -79,9 +80,9 @@ $dateTo       = $filters['date_to'] ?? '';
 <div class="stats-grid">
   <div class="glass-card stat-card">
     <div class="stat-icon"><i class="bi bi-car-front-fill"></i></div>
-    <div class="stat-value"><?= number_format($total) ?></div>
+    <div class="stat-value"><?= number_format($isFareDiscrepancy ? ($counts['total'] ?? $total) : $total) ?></div>
     <div class="stat-label">Total Rides</div>
-    <div class="fs-12 text-muted mt-1"><?= $activeFilter !== 'all' ? ucfirst($activeFilter) . ' filter active' : 'All statuses' ?></div>
+    <div class="fs-12 text-muted mt-1"><?= $activeFilter !== 'all' && !$isFareDiscrepancy ? ucfirst($activeFilter) . ' filter active' : 'All statuses' ?></div>
   </div>
   <div class="glass-card stat-card">
     <div class="stat-icon" style="background:#D1FAE522;color:#059669"><i class="bi bi-broadcast"></i></div>
@@ -106,25 +107,38 @@ $dateTo       = $filters['date_to'] ?? '';
 <!-- Status Tabs -->
 <div style="display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap">
   <?php
+  $allTotal = $isFareDiscrepancy ? ($counts['total'] ?? $total) : $total;
   $tabDefs = [
-      ['all',       'All Rides',  $total,                      ''],
-      ['enroute',   'En Route',   $counts['enroute'],          '#059669'],
-      ['assigned',  'Assigned',   $counts['assigned'],         '#7c3aed'],
-      ['searching', 'Searching',  $counts['searching'],        '#854d0e'],
-      ['scheduled', 'Scheduled',  $counts['scheduled'],        '#1d4ed8'],
-      ['completed', 'Completed',  $counts['completed'],        '#16a34a'],
-      ['cancelled', 'Cancelled',  $counts['cancelled'],        '#dc2626'],
+      ['all',          'All Rides',        $allTotal,                      ''],
+      ['enroute',      'En Route',         $counts['enroute'],             '#059669'],
+      ['assigned',     'Assigned',         $counts['assigned'],            '#7c3aed'],
+      ['searching',    'Searching',        $counts['searching'],           '#854d0e'],
+      ['scheduled',    'Scheduled',        $counts['scheduled'],           '#1d4ed8'],
+      ['completed',    'Completed',        $counts['completed'],           '#16a34a'],
+      ['cancelled',    'Cancelled',        $counts['cancelled'],           '#dc2626'],
+      ['discrepancy',  'Fare Discrepancy', $counts['discrepancy'] ?? 0,   '#dc2626'],
   ];
   foreach ($tabDefs as [$slug, $label, $cnt, $dotColor]):
-      $isActive = ($activeFilter === $slug);
+      $isActive      = ($activeFilter === $slug);
+      $isWarn        = ($slug === 'discrepancy');
+      $warnActive    = 'rgba(220,38,38,0.12)';
+      $warnInactive  = 'rgba(220,38,38,0.06)';
+      $warnBorder    = $isActive ? '#dc2626' : 'rgba(220,38,38,0.3)';
+      $tabBg         = $isWarn ? ($isActive ? $warnActive : $warnInactive)    : ($isActive ? 'var(--accent-soft)' : '#fff');
+      $tabBorder     = $isWarn ? $warnBorder                                  : ($isActive ? 'var(--accent)' : 'var(--border)');
+      $tabColor      = $isWarn ? '#dc2626'                                     : ($isActive ? 'var(--accent)' : 'var(--text-muted)');
+      $badgeBg       = $isWarn ? ($isActive ? '#dc2626' : 'rgba(220,38,38,0.15)') : ($isActive ? 'var(--accent)' : 'var(--border)');
+      $badgeColor    = $isWarn ? ($isActive ? '#fff' : '#dc2626')              : ($isActive ? '#fff' : 'var(--text-muted)');
   ?>
   <a href="?page=rides&status=<?= $slug ?>&search=<?= urlencode($searchQuery) ?>&date_from=<?= urlencode($dateFrom) ?>&date_to=<?= urlencode($dateTo) ?>"
-     style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;text-decoration:none;transition:var(--t);border:1px solid <?= $isActive ? 'var(--accent)' : 'var(--border)' ?>;background:<?= $isActive ? 'var(--accent-soft)' : '#fff' ?>;color:<?= $isActive ? 'var(--accent)' : 'var(--text-muted)' ?>">
-    <?php if ($dotColor && $slug !== 'all'): ?>
+     style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;text-decoration:none;transition:var(--t);border:1px solid <?= $tabBorder ?>;background:<?= $tabBg ?>;color:<?= $tabColor ?>">
+    <?php if ($isWarn): ?>
+    <i class="bi bi-exclamation-triangle-fill" style="font-size:11px"></i>
+    <?php elseif ($dotColor && $slug !== 'all'): ?>
     <span style="width:7px;height:7px;border-radius:50%;background:<?= $dotColor ?>;flex-shrink:0"></span>
     <?php endif; ?>
     <?= $label ?>
-    <span style="font-size:11px;padding:1px 6px;border-radius:99px;background:<?= $isActive ? 'var(--accent)' : 'var(--border)' ?>;color:<?= $isActive ? '#fff' : 'var(--text-muted)' ?>"><?= $cnt ?></span>
+    <span style="font-size:11px;padding:1px 6px;border-radius:99px;background:<?= $badgeBg ?>;color:<?= $badgeColor ?>"><?= $cnt ?></span>
   </a>
   <?php endforeach; ?>
 </div>
@@ -155,6 +169,124 @@ $dateTo       = $filters['date_to'] ?? '';
 
 <!-- Rides Table -->
 <div class="glass-card">
+  <?php if ($isFareDiscrepancy): ?>
+  <div class="card-header-bar">
+    <i class="bi bi-exclamation-triangle-fill" style="color:#dc2626;font-size:18px"></i>
+    <div>
+      <div class="card-title">Fare Discrepancy Rides</div>
+      <div class="card-subtitle"><?= number_format($total) ?> ride<?= $total !== 1 ? 's' : '' ?> where driver charged less than the estimated fare</div>
+    </div>
+    <div style="margin-left:auto">
+      <span style="font-size:12px;background:rgba(220,38,38,0.1);color:#dc2626;padding:5px 12px;border-radius:20px;font-weight:600;border:1px solid rgba(220,38,38,0.2)">
+        <i class="bi bi-info-circle me-1"></i> Completed rides · final_fare &lt; estimated fare
+      </span>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <?php if (empty($rides)): ?>
+    <div class="empty-state">
+      <i class="bi bi-check-circle" style="color:#16a34a"></i>
+      <h4>No discrepancies found</h4>
+      <p>All completed rides were charged at or above the estimated fare.</p>
+    </div>
+    <?php else: ?>
+    <table class="glass-table" id="ridesTable">
+      <thead>
+        <tr>
+          <th>Ride ID</th>
+          <th>Passenger</th>
+          <th>Driver</th>
+          <th>Route</th>
+          <th style="text-align:right">Estimated Fare</th>
+          <th style="text-align:right">Charged Fare</th>
+          <th style="text-align:right;color:#dc2626">Shortfall</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($rides as $r):
+          $id          = $r['id'];
+          $estimated   = (float)($r['fare_eur']   ?? 0);
+          $charged     = (float)($r['final_fare']  ?? 0);
+          $shortfall   = $estimated - $charged;
+          $pctOff      = $estimated > 0 ? round(($shortfall / $estimated) * 100, 1) : 0;
+          $severity    = $pctOff >= 30 ? '#dc2626' : ($pctOff >= 15 ? '#d97706' : '#854d0e');
+        ?>
+        <tr>
+          <td class="text-muted fs-12"><?= htmlspecialchars(substr($id, 0, 8)) ?>…</td>
+
+          <td>
+            <div class="user-cell">
+              <div class="user-avatar-sm" style="background:linear-gradient(135deg,#F37A20,#e06010)">
+                <?= strtoupper(substr($r['passenger_name'] ?? '?', 0, 1)) ?>
+              </div>
+              <div class="user-cell-info">
+                <div class="name"><?= htmlspecialchars($r['passenger_name'] ?? '—') ?></div>
+                <div class="meta"><?= htmlspecialchars($r['passenger_phone'] ?? '') ?></div>
+              </div>
+            </div>
+          </td>
+
+          <td>
+            <?php if (!empty($r['driver_name'])): ?>
+            <div class="user-cell">
+              <div class="user-avatar-sm" style="background:linear-gradient(135deg,#6366f1,#4f46e5)">
+                <?= strtoupper(substr($r['driver_name'], 0, 1)) ?>
+              </div>
+              <div class="user-cell-info">
+                <div class="name"><?= htmlspecialchars($r['driver_name']) ?></div>
+                <div class="meta"><?= htmlspecialchars($r['driver_phone'] ?? '') ?></div>
+              </div>
+            </div>
+            <?php else: ?>
+            <span class="text-muted fs-12">—</span>
+            <?php endif; ?>
+          </td>
+
+          <td style="max-width:200px">
+            <div style="font-size:11.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              <i class="bi bi-geo-alt" style="color:var(--accent);margin-right:2px"></i><?= htmlspecialchars(substr($r['pickup_addr'] ?? '—', 0, 28)) ?>
+            </div>
+            <div style="font-size:11.5px;color:var(--text-subtle);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">
+              <i class="bi bi-geo-alt-fill" style="color:#7c3aed;margin-right:2px"></i><?= htmlspecialchars(substr($r['dest_addr'] ?? '—', 0, 28)) ?>
+            </div>
+          </td>
+
+          <td style="text-align:right;font-weight:500;color:var(--text-muted)">€<?= number_format($estimated, 2) ?></td>
+
+          <td style="text-align:right;font-weight:600;color:#dc2626">€<?= number_format($charged, 2) ?></td>
+
+          <td style="text-align:right">
+            <div style="font-weight:700;color:<?= $severity ?>">−€<?= number_format($shortfall, 2) ?></div>
+            <div style="font-size:10.5px;color:<?= $severity ?>;opacity:0.8"><?= $pctOff ?>% under</div>
+          </td>
+
+          <td class="text-muted fs-12">
+            <?= !empty($r['created_at']) ? date('d M y H:i', strtotime($r['created_at'])) : '—' ?>
+          </td>
+
+          <td>
+            <div style="display:flex;gap:4px;flex-wrap:nowrap">
+              <button class="btn-icon" title="View Details"
+                onclick="viewRide(<?= htmlspecialchars(json_encode($id)) ?>)">
+                <i class="bi bi-eye"></i>
+              </button>
+              <button class="btn-icon" title="Invoice" style="color:#7c3aed"
+                onclick="showInvoice(<?= htmlspecialchars(json_encode($id)) ?>)">
+                <i class="bi bi-receipt"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+    <?php endif; ?>
+  </div>
+
+  <?php else: /* ── normal rides table ── */ ?>
   <div class="card-header-bar">
     <i class="bi bi-car-front-fill" style="color:var(--accent);font-size:18px"></i>
     <div>
@@ -289,6 +421,7 @@ $dateTo       = $filters['date_to'] ?? '';
     </table>
     <?php endif; ?>
   </div>
+  <?php endif; /* end normal table / discrepancy table */ ?>
 
   <?php if ($totalPages > 1): ?>
   <div class="pagination-bar">

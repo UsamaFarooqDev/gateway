@@ -121,6 +121,60 @@ class RidesModel {
         ];
     }
 
+    /**
+     * Fetch completed rides where final_fare < fare_eur (driver undercharged).
+     * PostgREST can't compare two columns, so we fetch completed+not-null rows
+     * and filter in PHP. Only 3 columns fetched for the count path.
+     */
+    public function loadFareDiscrepancyData(array $filters, int $page, int $perPage): array
+    {
+        $params = [
+            'select'     => 'id,status,fare_eur,final_fare,payment_method,created_at,updated_at,pickup_addr,dest_addr,pickup_lat,pickup_lng,dest_lat,dest_lng,user_id,driver_id,notes,cancelled_by:canceled_by,distance_km,duration_min',
+            'status'     => 'eq.completed',
+            'final_fare' => 'not.is.null',
+            'fare_eur'   => 'not.is.null',
+            'order'      => 'created_at.desc',
+        ];
+        if (!empty($filters['date_from'])) {
+            $params['created_at'][] = 'gte.' . $filters['date_from'] . 'T00:00:00' . date('P');
+        }
+        if (!empty($filters['date_to'])) {
+            $params['created_at'][] = 'lte.' . $filters['date_to'] . 'T23:59:59' . date('P');
+        }
+        if (!empty($filters['search'])) {
+            $params['pickup_addr'] = 'ilike.*' . $filters['search'] . '*';
+        }
+
+        $rows = $this->db->select('rides', $params);
+
+        $discrepant = array_values(array_filter($rows, fn($r) =>
+            (float)($r['final_fare'] ?? 0) > 0 &&
+            (float)($r['fare_eur']   ?? 0) > 0 &&
+            (float)$r['final_fare'] < (float)$r['fare_eur']
+        ));
+
+        $total     = count($discrepant);
+        $paginated = array_slice($discrepant, ($page - 1) * $perPage, $perPage);
+
+        return ['rides' => $this->joinNames($paginated), 'total' => $total];
+    }
+
+    /** Lightweight count of fare-discrepancy rides (3 columns, completed only). */
+    public function getFareDiscrepancyCount(): int
+    {
+        $rows = $this->db->select('rides', [
+            'select'     => 'id,fare_eur,final_fare',
+            'status'     => 'eq.completed',
+            'final_fare' => 'not.is.null',
+            'fare_eur'   => 'not.is.null',
+        ]);
+        return count(array_filter($rows, fn($r) =>
+            (float)($r['final_fare'] ?? 0) > 0 &&
+            (float)($r['fare_eur']   ?? 0) > 0 &&
+            (float)$r['final_fare'] < (float)$r['fare_eur']
+        ));
+    }
+
     public function cancelRide(string $id): bool {
         return $this->db->update('rides', [
             'status'     => 'cancelled',

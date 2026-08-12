@@ -24,15 +24,32 @@ class RidesController {
         $page    = max(1, (int)($_GET['p'] ?? 1));
         $perPage = 25;
 
-        $pageData   = $this->model->loadPageData($filters, $page, $perPage);
-        $rides      = $pageData['rides'];
-        $total      = $pageData['total'];
-        $counts     = $pageData['counts'];
+        $isFareDiscrepancy = ($filters['status'] === 'discrepancy');
+
+        if ($isFareDiscrepancy) {
+            // Fare-discrepancy tab: PHP-filtered completed rides where final_fare < fare_eur
+            $anomalyData = $this->model->loadFareDiscrepancyData($filters, $page, $perPage);
+            $rides       = $anomalyData['rides'];
+            $total       = $anomalyData['total'];
+            // Still need status counts for the other tab badges — reuse parallel counts
+            $countFilters = array_merge($filters, ['status' => 'all']);
+            $countsPage   = $this->model->loadPageData($countFilters, 1, 1);
+            $counts       = $countsPage['counts'];
+            $counts['discrepancy'] = $total;
+        } else {
+            $pageData  = $this->model->loadPageData($filters, $page, $perPage);
+            $rides     = $pageData['rides'];
+            $total     = $pageData['total'];
+            $counts    = $pageData['counts'];
+            // Add discrepancy count for badge (lightweight extra call)
+            $counts['discrepancy'] = $this->model->getFareDiscrepancyCount();
+        }
+
         $totalPages = (int)ceil($total / $perPage);
 
-        $currentPage = 'rides';
-        $pageTitle   = 'Ride Management';
-        $pageCrumbs  = ['Ride Management'];
+        $currentPage        = 'rides';
+        $pageTitle          = 'Ride Management';
+        $pageCrumbs         = ['Ride Management'];
 
         require_once 'includes/header.php';
         require_once 'app/views/rides/index.php';

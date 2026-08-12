@@ -41,31 +41,78 @@ function navItem(string $page, string $icon, string $label, string $current, ?st
 
     <?= navItem('dashboard', 'bi-speedometer2', 'Dashboard', $currentPage) ?>
 
+    <?php $showRides = Permission::can('gateway','rides','view') || Permission::can('gateway','dispatcher','view'); ?>
+    <?php if ($showRides): ?>
     <div class="nav-section-label">Rides &amp; Dispatch</div>
+    <?php if (Permission::can('gateway','rides','view')): ?>
     <?= navItem('rides',      'bi-car-front-fill', 'Ride Management',    $currentPage) ?>
+    <?php endif; ?>
+    <?php if (Permission::can('gateway','dispatcher','view')): ?>
     <?= navItem('dispatcher', 'bi-broadcast',      'Dispatcher Console', $currentPage) ?>
+    <?php endif; ?>
+    <?php endif; ?>
 
+    <?php $showPeople = Permission::can('gateway','drivers','view') || Permission::can('gateway','passengers','view') || Permission::can('gateway','corporate','view'); ?>
+    <?php if ($showPeople): ?>
     <div class="nav-section-label">People</div>
-    <?= navItem('drivers',    'bi-person-badge',       'Driver Management',   $currentPage) ?>
-    <?= navItem('passengers', 'bi-people-fill',        'Passenger Management',$currentPage) ?>
-    <?= navItem('corporate',  'bi-building',           'Corporate Accounts',  $currentPage) ?>
+    <?php if (Permission::can('gateway','drivers','view')): ?>
+    <?= navItem('drivers',    'bi-person-badge',   'Driver Management',    $currentPage) ?>
+    <?php endif; ?>
+    <?php if (Permission::can('gateway','passengers','view')): ?>
+    <?= navItem('passengers', 'bi-people-fill',    'Passenger Management', $currentPage) ?>
+    <?php endif; ?>
+    <?php if (Permission::can('gateway','corporate','view')): ?>
+    <?= navItem('corporate',  'bi-building',       'Corporate Accounts',   $currentPage) ?>
+    <?php endif; ?>
+    <?php endif; ?>
 
+    <?php $showOps = Permission::can('gateway','fleet','view') || Permission::can('gateway','finance','view') || Permission::can('gateway','promotions','view') || Permission::can('gateway','zones','view'); ?>
+    <?php if ($showOps): ?>
     <div class="nav-section-label">Operations</div>
-    <?= navItem('fleet',      'bi-truck-front-fill',   'Fleet Management',    $currentPage) ?>
-    <?= navItem('finance',    'bi-cash-coin',          'Finance &amp; Payments', $currentPage) ?>
-    <?= navItem('promotions', 'bi-tag-fill',           'Promotions &amp; Pricing',$currentPage) ?>
+    <?php if (Permission::can('gateway','fleet','view')): ?>
+    <?= navItem('fleet',      'bi-truck-front-fill', 'Fleet Management',       $currentPage) ?>
+    <?php endif; ?>
+    <?php if (Permission::can('gateway','finance','view')): ?>
+    <?= navItem('finance',    'bi-cash-coin',         'Finance &amp; Payments', $currentPage) ?>
+    <?php endif; ?>
+    <?php if (Permission::can('gateway','promotions','view')): ?>
+    <?= navItem('promotions', 'bi-tag-fill',           'Promotions &amp; Pricing', $currentPage) ?>
+    <?php endif; ?>
+    <?php if (Permission::can('gateway','zones','view')): ?>
     <?= navItem('zones',      'bi-geo-alt-fill',       'Zones &amp; Coverage',   $currentPage) ?>
+    <?php endif; ?>
+    <?php endif; ?>
 
+    <?php $showTools = Permission::can('gateway','notifications','view') || Permission::can('gateway','analytics','view') || Permission::can('gateway','support','view') || Permission::can('gateway','ratings','view'); ?>
+    <?php if ($showTools): ?>
     <div class="nav-section-label">Tools</div>
-    <?= navItem('notifications','bi-bell-fill',        'Notifications &amp; Alerts', $currentPage) ?>
-    <?= navItem('analytics',    'bi-bar-chart-fill',   'Analytics &amp; Reports', $currentPage) ?>
-    <?= navItem('support',      'bi-headset',          'Support &amp; Disputes',  $currentPage) ?>
-    <?= navItem('ratings',      'bi-star-fill',        'Ratings &amp; Reviews',   $currentPage) ?>
+    <?php if (Permission::can('gateway','notifications','view')): ?>
+    <?= navItem('notifications', 'bi-bell-fill',       'Notifications &amp; Alerts', $currentPage) ?>
+    <?php endif; ?>
+    <?php if (Permission::can('gateway','analytics','view')): ?>
+    <?= navItem('analytics',     'bi-bar-chart-fill',  'Analytics &amp; Reports',    $currentPage) ?>
+    <?php endif; ?>
+    <?php if (Permission::can('gateway','support','view')): ?>
+    <?= navItem('support',       'bi-headset',         'Support &amp; Disputes',     $currentPage) ?>
+    <?php endif; ?>
+    <?php if (Permission::can('gateway','ratings','view')): ?>
+    <?= navItem('ratings',       'bi-star-fill',       'Ratings &amp; Reviews',      $currentPage) ?>
+    <?php endif; ?>
+    <?php endif; ?>
 
+    <?php $showSystem = Permission::can('gateway','settings','view') || Permission::can('gateway','admins','view') || Permission::can('gateway','integrations','view'); ?>
+    <?php if ($showSystem): ?>
     <div class="nav-section-label">System</div>
-    <?= navItem('settings',  'bi-gear-fill',      'Settings &amp; Config', $currentPage) ?>
-    <?= navItem('admins',    'bi-shield-lock',    'Admin Users',           $currentPage) ?>
-    <?= navItem('integrations','bi-plug-fill',    'Integrations',          $currentPage) ?>
+    <?php if (Permission::can('gateway','settings','view')): ?>
+    <?= navItem('settings',     'bi-gear-fill',    'Settings &amp; Config', $currentPage) ?>
+    <?php endif; ?>
+    <?php if (Permission::can('gateway','admins','view')): ?>
+    <?= navItem('admins',       'bi-shield-lock',  'Admin Users',           $currentPage) ?>
+    <?php endif; ?>
+    <?php if (Permission::can('gateway','integrations','view')): ?>
+    <?= navItem('integrations', 'bi-plug-fill',    'Integrations',          $currentPage) ?>
+    <?php endif; ?>
+    <?php endif; ?>
 
   </nav>
 

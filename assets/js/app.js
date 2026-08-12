@@ -25,9 +25,14 @@
     const savedScroll = sessionStorage.getItem(SCROLL_KEY);
     if (savedScroll) sidebarNav.scrollTop = parseInt(savedScroll, 10);
 
-    // Save scroll position before navigating away
-    window.addEventListener('beforeunload', () => {
+    // Save scroll position — use pagehide (bfcache-safe) instead of beforeunload
+    window.addEventListener('pagehide', () => {
       sessionStorage.setItem(SCROLL_KEY, String(sidebarNav.scrollTop));
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        sessionStorage.setItem(SCROLL_KEY, String(sidebarNav.scrollTop));
+      }
     });
   }
 

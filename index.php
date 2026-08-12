@@ -11,6 +11,8 @@ if (!isset($_SESSION['admin_id'])) {
 }
 
 require_once 'config/database.php';
+require_once 'app/helpers/Permission.php';
+Permission::init();
 
 // Sanitise page param
 $page = preg_replace('/[^a-z0-9_-]/', '', strtolower($_GET['page'] ?? 'dashboard'));
@@ -32,7 +34,7 @@ $routes = [
     'support'       => null,
     'ratings'       => null,
     'settings'      => null,
-    'admins'        => null,
+    'admins'        => ['file' => 'app/controllers/AdminsController.php', 'class' => 'AdminsController'],
     'integrations'  => ['file' => 'app/controllers/IntegrationsController.php',   'class' => 'IntegrationsController'],
 ];
 
