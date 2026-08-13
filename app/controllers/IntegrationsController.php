@@ -8,6 +8,8 @@ class IntegrationsController {
     }
 
     public function index(): void {
+        Permission::requireCan('gateway', 'integrations', 'view');
+
         $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
         if ($action === 'test') {
@@ -17,6 +19,7 @@ class IntegrationsController {
         }
 
         if ($action === 'toggle' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            Permission::requireCan('gateway', 'integrations', 'edit');
             header('Content-Type: application/json');
             $this->handleToggle();
             return;
@@ -29,6 +32,7 @@ class IntegrationsController {
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['section'])) {
+            Permission::requireCan('gateway', 'integrations', 'edit');
             header('Content-Type: application/json');
             $this->handleSave();
             return;

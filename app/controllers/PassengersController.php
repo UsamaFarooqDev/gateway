@@ -9,6 +9,8 @@ class PassengersController {
     }
 
     public function index(): void {
+        Permission::requireCan('gateway', 'passengers', 'view');
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $this->handlePost();
             return;
@@ -45,6 +47,7 @@ class PassengersController {
         $id     = (int)($_POST['id'] ?? 0);
 
         if ($action === 'update_status' && !empty($_POST['id'])) {
+            Permission::requireCan('gateway', 'passengers', 'edit');
             $id     = $_POST['id'];  // UUID string
             $status = $_POST['status'] ?? '';
             try {

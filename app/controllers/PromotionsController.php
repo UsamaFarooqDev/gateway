@@ -9,6 +9,8 @@ class PromotionsController {
     }
 
     public function index(): void {
+        Permission::requireCan('gateway', 'promotions', 'view');
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
             header('Content-Type: application/json');
             $this->handlePost();
@@ -74,6 +76,7 @@ class PromotionsController {
     // ── Pricing ──────────────────────────────────────────────────────
 
     private function createPricing(): void {
+        Permission::requireCan('gateway', 'promotions', 'create');
         $r = $this->model->createPricingConfig($_POST);
         $this->json($r
             ? ['success' => true,  'message' => 'Pricing config created.', 'data' => $r]
@@ -81,6 +84,7 @@ class PromotionsController {
     }
 
     private function updatePricing(): void {
+        Permission::requireCan('gateway', 'promotions', 'edit');
         $id = $_POST['id'] ?? '';
         if (!$id) { $this->json(['success' => false, 'message' => 'Missing ID.']); return; }
         $ok = $this->model->updatePricingConfig($id, $_POST);
@@ -88,6 +92,7 @@ class PromotionsController {
     }
 
     private function deletePricing(): void {
+        Permission::requireCan('gateway', 'promotions', 'delete');
         $id = $_POST['id'] ?? '';
         if (!$id) { $this->json(['success' => false, 'message' => 'Missing ID.']); return; }
         $ok = $this->model->deletePricingConfig($id);
@@ -95,6 +100,7 @@ class PromotionsController {
     }
 
     private function togglePricing(): void {
+        Permission::requireCan('gateway', 'promotions', 'edit');
         $id     = $_POST['id'] ?? '';
         $active = filter_var($_POST['active'] ?? false, FILTER_VALIDATE_BOOLEAN);
         if (!$id) { $this->json(['success' => false, 'message' => 'Missing ID.']); return; }
@@ -113,6 +119,7 @@ class PromotionsController {
     // ── Promotions ───────────────────────────────────────────────────
 
     private function createPromo(): void {
+        Permission::requireCan('gateway', 'promotions', 'create');
         $r = $this->model->createPromotion($_POST);
         $this->json($r
             ? ['success' => true,  'message' => 'Promotion created.', 'data' => $r]
@@ -120,6 +127,7 @@ class PromotionsController {
     }
 
     private function updatePromo(): void {
+        Permission::requireCan('gateway', 'promotions', 'edit');
         $id = $_POST['id'] ?? '';
         if (!$id) { $this->json(['success' => false, 'message' => 'Missing ID.']); return; }
         $ok = $this->model->updatePromotion($id, $_POST);
@@ -127,6 +135,7 @@ class PromotionsController {
     }
 
     private function deletePromo(): void {
+        Permission::requireCan('gateway', 'promotions', 'delete');
         $id = $_POST['id'] ?? '';
         if (!$id) { $this->json(['success' => false, 'message' => 'Missing ID.']); return; }
         $ok = $this->model->deletePromotion($id);
@@ -134,6 +143,7 @@ class PromotionsController {
     }
 
     private function togglePromo(): void {
+        Permission::requireCan('gateway', 'promotions', 'edit');
         $id     = $_POST['id'] ?? '';
         $active = filter_var($_POST['active'] ?? false, FILTER_VALIDATE_BOOLEAN);
         if (!$id) { $this->json(['success' => false, 'message' => 'Missing ID.']); return; }
@@ -152,6 +162,7 @@ class PromotionsController {
     // ── Promo Codes ──────────────────────────────────────────────────
 
     private function createPromoCode(): void {
+        Permission::requireCan('gateway', 'promotions', 'create');
         $r = $this->model->createPromoCode($_POST);
         $this->json($r
             ? ['success' => true,  'message' => 'Promo code created.', 'data' => $r]
@@ -159,6 +170,7 @@ class PromotionsController {
     }
 
     private function updatePromoCode(): void {
+        Permission::requireCan('gateway', 'promotions', 'edit');
         $id = $_POST['id'] ?? '';
         if (!$id) { $this->json(['success' => false, 'message' => 'Missing ID.']); return; }
         $ok = $this->model->updatePromoCode($id, $_POST);
@@ -166,6 +178,7 @@ class PromotionsController {
     }
 
     private function deletePromoCode(): void {
+        Permission::requireCan('gateway', 'promotions', 'delete');
         $id = $_POST['id'] ?? '';
         if (!$id) { $this->json(['success' => false, 'message' => 'Missing ID.']); return; }
         $ok = $this->model->deletePromoCode($id);
@@ -173,6 +186,7 @@ class PromotionsController {
     }
 
     private function togglePromoCode(): void {
+        Permission::requireCan('gateway', 'promotions', 'edit');
         $id     = $_POST['id'] ?? '';
         $active = filter_var($_POST['active'] ?? false, FILTER_VALIDATE_BOOLEAN);
         if (!$id) { $this->json(['success' => false, 'message' => 'Missing ID.']); return; }

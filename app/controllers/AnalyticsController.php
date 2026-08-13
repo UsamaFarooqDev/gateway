@@ -9,6 +9,8 @@ class AnalyticsController {
     }
 
     public function index(): void {
+        Permission::requireCan('gateway', 'analytics', 'view');
+
         $tab = preg_replace('/[^a-z]/', '', $_GET['tab'] ?? 'revenue');
         $tabs = ['revenue', 'rides', 'drivers', 'passengers', 'heatmap'];
         if (!in_array($tab, $tabs, true)) $tab = 'revenue';

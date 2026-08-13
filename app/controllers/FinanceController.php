@@ -12,7 +12,10 @@ class FinanceController {
     }
 
     public function index(): void {
+        Permission::requireCan('gateway', 'finance', 'view');
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'issue_credit') {
+            Permission::requireCan('gateway', 'finance', 'edit');
             $this->handleIssueCredit();
             return;
         }

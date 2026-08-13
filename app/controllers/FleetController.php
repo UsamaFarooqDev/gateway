@@ -9,6 +9,8 @@ class FleetController {
     }
 
     public function index(): void {
+        Permission::requireCan('gateway', 'fleet', 'view');
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
             header('Content-Type: application/json');
             $this->handlePost();
@@ -52,6 +54,7 @@ class FleetController {
         $action = $_POST['action'] ?? '';
 
         if ($action === 'create_type') {
+            Permission::requireCan('gateway', 'fleet', 'create');
             $result = $this->model->createRideType($_POST);
             echo json_encode($result
                 ? ['success' => true,  'message' => 'Vehicle type created.', 'data' => $result]
@@ -60,12 +63,14 @@ class FleetController {
         }
 
         if ($action === 'update_type' && !empty($_POST['id'])) {
+            Permission::requireCan('gateway', 'fleet', 'edit');
             $ok = $this->model->updateRideType($_POST['id'], $_POST);
             echo json_encode(['success' => $ok, 'message' => $ok ? 'Vehicle type updated.' : 'Update failed.']);
             exit;
         }
 
         if ($action === 'toggle_type' && !empty($_POST['id'])) {
+            Permission::requireCan('gateway', 'fleet', 'edit');
             $active = filter_var($_POST['active'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $ok     = $this->model->toggleRideType($_POST['id'], $active);
             echo json_encode(['success' => $ok, 'message' => $ok ? 'Status updated.' : 'Update failed.']);
@@ -73,6 +78,7 @@ class FleetController {
         }
 
         if ($action === 'delete_type' && !empty($_POST['id'])) {
+            Permission::requireCan('gateway', 'fleet', 'delete');
             $result = $this->model->deleteRideType($_POST['id']);
             echo json_encode($result);
             exit;

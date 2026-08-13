@@ -5,6 +5,8 @@ class DashboardController {
     public function __construct(private SupabaseDB $db) {}
 
     public function index(): void {
+        Permission::requireCan('gateway', 'dashboard', 'view');
+
         $model    = new DashboardModel($this->db);
         $cacheKey = 'dash_all';
 

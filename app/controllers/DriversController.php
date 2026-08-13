@@ -9,6 +9,8 @@ class DriversController {
     }
 
     public function index(): void {
+        Permission::requireCan('gateway', 'drivers', 'view');
+
         // AJAX: live search
         if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'search_ajax') {
             header('Content-Type: application/json');
@@ -67,11 +69,13 @@ class DriversController {
         $id     = (int)($_POST['id'] ?? 0);
 
         if ($action === 'add_driver') {
+            Permission::requireCan('gateway', 'drivers', 'create');
             $this->handleAddDriver();
             return;
         }
 
         if ($action === 'update_status' && !empty($_POST['id'])) {
+            Permission::requireCan('gateway', 'drivers', 'edit');
             $id     = $_POST['id'];  // UUID string
             $status = $_POST['status'] ?? '';
             try {
@@ -84,6 +88,7 @@ class DriversController {
         }
 
         if ($action === 'assign_ride_types' && !empty($_POST['id'])) {
+            Permission::requireCan('gateway', 'drivers', 'edit');
             $id        = $_POST['id'];
             $names     = json_decode($_POST['type_names'] ?? '[]', true);
             $names     = is_array($names) ? $names : [];
@@ -94,18 +99,21 @@ class DriversController {
         }
 
         if ($action === 'delete_driver' && !empty($_POST['id'])) {
+            Permission::requireCan('gateway', 'drivers', 'delete');
             $result = $this->model->deleteDriver($_POST['id']);
             echo json_encode($result);
             exit;
         }
 
         if ($action === 'approve_driver' && !empty($_POST['id'])) {
+            Permission::requireCan('gateway', 'drivers', 'edit');
             $result = $this->model->approveDriver($_POST['id']);
             echo json_encode($result);
             exit;
         }
 
         if ($action === 'upload_doc' && !empty($_POST['id']) && !empty($_POST['doc_type'])) {
+            Permission::requireCan('gateway', 'drivers', 'edit');
             $driverId = $_POST['id'];
             $docType  = $_POST['doc_type'];
             $file     = $_FILES['doc_file'] ?? null;

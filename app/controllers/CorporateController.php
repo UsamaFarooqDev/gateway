@@ -9,6 +9,8 @@ class CorporateController {
     }
 
     public function index(): void {
+        Permission::requireCan('gateway', 'corporate', 'view');
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['action'])) {
             header('Content-Type: application/json');
             $this->handlePost();
@@ -57,17 +59,23 @@ class CorporateController {
     }
 
     private function handlePost(): void {
-        match ($_POST['action'] ?? '') {
-            'create_corporate' => $this->createCorporate(),
-            'update_corporate' => $this->updateCorporate(),
-            'delete_corporate' => $this->deleteCorporate(),
-            'toggle_corporate' => $this->toggleCorporate(),
+        $action = $_POST['action'] ?? '';
+        match ($action) {
+            'create_corporate' => $this->requireAndRun('create', fn() => $this->createCorporate()),
+            'update_corporate' => $this->requireAndRun('edit',   fn() => $this->updateCorporate()),
+            'delete_corporate' => $this->requireAndRun('delete', fn() => $this->deleteCorporate()),
+            'toggle_corporate' => $this->requireAndRun('edit',   fn() => $this->toggleCorporate()),
             'get_corporate'    => $this->getCorporate(),
             'get_employees'    => $this->getEmployees(),
             'compute_invoice'      => $this->computeInvoice(),
             'get_revenue_history'  => $this->getRevenueHistory(),
             default                => $this->json(['success' => false, 'message' => 'Unknown action.']),
         };
+    }
+
+    private function requireAndRun(string $action, callable $fn): void {
+        Permission::requireCan('gateway', 'corporate', $action);
+        $fn();
     }
 
     private function createCorporate(): void {

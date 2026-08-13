@@ -9,6 +9,8 @@ class RidesController {
     }
 
     public function index(): void {
+        Permission::requireCan('gateway', 'rides', 'view');
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $this->handlePost();
             return;
@@ -67,12 +69,14 @@ class RidesController {
         }
 
         if ($action === 'cancel_ride') {
+            Permission::requireCan('gateway', 'rides', 'edit');
             $ok = $this->model->cancelRide($id);
             echo json_encode(['success' => $ok, 'message' => $ok ? 'Ride cancelled.' : 'Failed to cancel.']);
             exit;
         }
 
         if ($action === 'update_status') {
+            Permission::requireCan('gateway', 'rides', 'edit');
             $status = $_POST['status'] ?? '';
             $ok = $this->model->updateStatus($id, $status);
             echo json_encode(['success' => $ok, 'message' => $ok ? 'Status updated.' : 'Invalid status.']);

@@ -11,12 +11,14 @@ class NotificationsController {
     }
 
     public function index(): void {
-        // JSON: alert counts for the notification bell dropdown
+        // JSON: alert counts for the notification bell dropdown (no module permission required)
         if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'get_alerts') {
             header('Content-Type: application/json');
             echo json_encode((new AlertsModel($this->db))->getAllAlerts());
             exit;
         }
+
+        Permission::requireCan('gateway', 'notifications', 'view');
 
         // JSON: search users for specific targeting
         if ($_SERVER['REQUEST_METHOD'] === 'GET' && ($_GET['action'] ?? '') === 'search_users') {
@@ -27,6 +29,7 @@ class NotificationsController {
 
         // JSON: send push campaign
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'send_push') {
+            Permission::requireCan('gateway', 'notifications', 'create');
             $this->handleSendPush();
             return;
         }
