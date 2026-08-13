@@ -214,7 +214,7 @@ class NotificationsController {
                     if (!$campaign['fcm_sent']) {
                         $campaign['fcm_error'] = $decoded['error']['message'] ?? "HTTP {$httpCode}";
                     }
-                } else {
+                } elseif (!$isSpecific) {
                     // Token-based group send — FCM topics require app-side subscribeToTopic() which is not guaranteed
                     $tokens = $this->fetchGroupTokens($audience);
                     if (!empty($tokens)) {
